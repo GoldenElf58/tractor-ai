@@ -17,29 +17,67 @@ def generate_deck() -> list[Card]:
             deck.append(Card(suit, value))
             deck.append(Card(suit, value))
     for i in range(2):
-        deck.append(Card(FaceSuit.JOKER, 1))
-        deck.append(Card(FaceSuit.JOKER, 2))
+        deck.append(Card(FaceSuit.JOKER, 16))
+        deck.append(Card(FaceSuit.JOKER, 17))
     shuffle(deck)
     return deck
+
+
+def get_trick_points(trick: tuple[Play, ...]) -> int:
+    return sum(get_card_points(play.card) for play in trick)
+
+
+def get_card_points(card: Card) -> int:
+    if card.rank == 5: return 5
+    if card.rank == 10 or card.rank == 13: return 10
+    return 0
 
 
 class GameState:
     def __init__(self):
         self.num_players: int = 4
+        self.players = [Player(i) for i in range(self.num_players)]
+        self.team_levels: list[int] = [2, 2]
         self.deck: list[Card] = generate_deck()
         self.trash: list[Card] = []
-        self.players = [Player(i) for i in range(self.num_players)]
-        self.players[0].draw_card(self.deck.pop())
         self.bid = Bid(True, None, 0, -1)
         self.active_player: int = 0
         self.trick_leader: int = 0
-        self.curr_trick: list[Card] = []
+        self.round_leader: int = 0
         self.dominant_rank: int = 2
-        self.trump_suit: FaceSuit = FaceSuit.SPADE
+        self.curr_trick: list[Play] = []
+        self.trump_suit: FaceSuit = FaceSuit.JOKER
         self.phase: Phase = Phase.DRAWING
+        self.offense_points: int = 0
+        self.setup_game()
+
+    def setup_game(self) -> None:
+        self.deck = generate_deck()
+        self.trash.clear()
+        for player in self.players:
+            player.tricks.clear()
+            player.cards.clear()
+        self.players[self.round_leader].draw_card(self.deck.pop())
+        self.bid = Bid(True, None, 0, -1)
+        self.active_player: int = self.round_leader
+        self.trick_leader: int = self.round_leader
+        self.dominant_rank: int = self.team_levels[self.round_leader % 2]
+        self.curr_trick.clear()
+        self.trump_suit: FaceSuit = FaceSuit.JOKER
+        self.phase: Phase = Phase.DRAWING
+        self.offense_points: int = 0
+
+    def is_in_progress(self) -> bool:
+        return self.phase != Phase.GAME_END
 
     def get_active_player(self) -> Player:
         return self.players[self.active_player]
+
+    def show_current_hand(self) -> str:
+        return self.get_active_player().show_hand(self.trump_suit, self.dominant_rank)
+
+    def show_current_trick(self) -> str:
+        return ', '.join(map(str, self.curr_trick))
 
     def generate_moves(self) -> list[Bid | Card | Play]:
         if self.phase == Phase.DRAWING:
@@ -101,7 +139,8 @@ class GameState:
             else:
                 quantity = 1
             bid_candidate: Bid = Bid(False, card, quantity, self.active_player)
-            valid_bid: bool = self.higher_bid(bid_candidate) and (not leader or card == self.bid.card)
+            valid_bid: bool = (self.higher_bid(bid_candidate) and (not leader or card == self.bid.card) and
+                               (bid_candidate.card.suit != FaceSuit.JOKER or bid_candidate.quantity == 2))
             if valid_bid:
                 moves.append(bid_candidate)
         return moves
@@ -116,8 +155,7 @@ class GameState:
             self.phase = Phase.BURYING
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
-            self.trump_suit = self.bid.card.suit
-            self.dominant_rank = self.bid.card.rank
+            self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
         else:
             self.get_active_player().draw_card(self.deck.pop())
         if move.empty_bid: return
@@ -128,36 +166,88 @@ class GameState:
         if self.phase != Phase.TRICK_TAKING: raise ValueError("Not in trick-taking phase")
         all_plays: list[Play] = []
         for card in self.get_active_player().cards:
-            play: Play = Play(card, 1, self.active_player)
+            play: Play = Play(card, None, 1, self.active_player)
             if play not in all_plays:
                 all_plays.append(play)
             else:
-                all_plays.append(Play(card, 2, self.active_player))
+                all_plays.append(Play(card, card, 2, self.active_player))
         if len(self.curr_trick) == 0:
             return all_plays
-        candidate_plays = [play for play in all_plays if play.card.suit == self.curr_trick[0].suit]
+        candidate_plays = [play for play in all_plays if play.card.suit == self.curr_trick[0].card.suit and
+                           play.quantity == self.curr_trick[0].quantity]
         if len(candidate_plays) == 0:
-            return all_plays
+            if self.curr_trick[0].quantity == 1: return all_plays
+            plays: list[Play] = []
+            num_matching_led_suit: int = sum(
+                1 for card in self.get_active_player().cards if card.suit == self.curr_trick[0].card.suit)
+            for i, card_1 in enumerate(self.get_active_player().cards):
+                if num_matching_led_suit >= 1 and card_1.suit != self.curr_trick[0].card.suit: continue
+                for j, card_2 in enumerate(self.get_active_player().cards):
+                    if i >= j: continue
+                    if num_matching_led_suit >= 2 and card_2.suit != self.curr_trick[0].card.suit: continue
+                    play: Play = Play(card_1, card_2, 2, self.active_player)
+                    plays.append(play)
+            return plays
         return candidate_plays
 
     def determine_trick_winner(self) -> int:
-        lead_suit: EffectiveSuit = self.curr_trick[0].get_effective_suit(self.trump_suit, self.dominant_rank)
-        best_card: Card = self.curr_trick[0]
+        lead_suit: EffectiveSuit = self.curr_trick[0].card.get_effective_suit(self.trump_suit, self.dominant_rank)
+        best_card: Card = self.curr_trick[0].card
         best_card_index: int = 0
-        for i, card in enumerate(self.curr_trick):
-            if not best_card.is_not_less(card, self.dominant_rank, self.trump_suit, lead_suit):
+        for i, play in enumerate(self.curr_trick):
+            if self.curr_trick[0].quantity == 2 and play.card != play.card_2: continue
+            if not best_card.is_not_less(play.card, self.dominant_rank, self.trump_suit, lead_suit):
                 best_card_index = i
-                best_card = card
+                best_card = play.card
         return (best_card_index + self.trick_leader) % self.num_players
 
     def move_trick(self, play: Play):
         if self.phase != Phase.TRICK_TAKING: raise ValueError("Not in trick taking phase")
         moves: list[Play] = self.generate_trick_moves()
         if play not in moves: raise ValueError("Invalid move")
-        for i in range(play.quantity):
-            self.curr_trick.append(self.get_active_player().remove_card(play.card))
+        self.get_active_player().remove_card(play.card)
+        if play.quantity == 2:
+            self.get_active_player().remove_card(play.card_2)
+        self.curr_trick.append(play)
         self.active_player = (self.active_player + 1) % self.num_players
         if len(self.curr_trick) == self.num_players:
             self.active_player = self.determine_trick_winner()
             self.get_active_player().win_trick(tuple(self.curr_trick))
+            if len(self.players[0].cards) == 0:
+                self.transition_rounds(self.active_player)
             self.curr_trick = []
+
+    def transition_rounds(self, trick_winner: int):
+        self.phase = Phase.DRAWING
+        self.score_points(trick_winner)
+        if self.offense_points < 80:
+            self.round_leader = (self.round_leader + 2) % 4
+            if self.team_levels[self.round_leader % 2] == 14:
+                self.phase = Phase.GAME_END
+                self.team_levels[self.round_leader % 2] = 15
+                return
+            if self.offense_points == 0:
+                self.team_levels[self.round_leader % 2] += 3
+            elif self.offense_points < 40:
+                self.team_levels[self.round_leader % 2] += 2
+            else:
+                self.team_levels[self.round_leader % 2] += 1
+        else:
+            self.round_leader = (self.round_leader + 1) % 4
+            if self.offense_points < 120:
+                pass
+            elif self.offense_points < 160:
+                self.team_levels[self.round_leader % 2] += 1
+            else:
+                self.team_levels[self.round_leader % 2] += 2
+        self.team_levels[self.round_leader % 2] = max(self.team_levels[self.round_leader % 2], 14)
+        self.dominant_rank = self.team_levels[self.round_leader % 2]
+        self.setup_game()
+
+    def score_points(self, trick_winner: int):
+        player_a: int = (self.round_leader + 1) % 4
+        player_b: int = (self.round_leader + 3) % 4
+        self.offense_points = sum(get_trick_points(trick) for trick in (*self.players[player_a].tricks,
+                                                                        *self.players[player_b].tricks))
+        if trick_winner == player_a or trick_winner == player_b:
+            self.offense_points += sum(get_card_points(card) for card in self.trash) * self.curr_trick[0].quantity * 2

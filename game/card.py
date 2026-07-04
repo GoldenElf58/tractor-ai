@@ -39,11 +39,11 @@ class Card:
         if this_effective_suit == EffectiveSuit.TRUMP and other_effective_suit != EffectiveSuit.TRUMP: return True
         if this_effective_suit != EffectiveSuit.TRUMP and other_effective_suit == EffectiveSuit.TRUMP: return False
         if lead_suit == this_effective_suit and lead_suit != other_effective_suit: return True
-        if lead_suit == other_effective_suit and lead_suit != this_effective_suit: return False
+        if lead_suit == other_effective_suit and this_effective_suit != lead_suit: return False
         return self.rank >= other.rank
 
     def __str__(self) -> str:
-        if self.suit == FaceSuit.JOKER: return "Little Joker" if self.rank == 1 else "Big Joker"
+        if self.suit == FaceSuit.JOKER: return "Little Joker" if self.rank == 16 else "Big Joker"
         if self.rank == 11: return f"Jack of {self.suit}"
         if self.rank == 12: return f"Queen of {self.suit}"
         if self.rank == 13: return f"King of {self.suit}"
