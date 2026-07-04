@@ -44,39 +44,39 @@ jobs:
       - name: Package Linux
         if: matrix.artifact == 'linux'
         run: |
-          mv dist/main dist/card-game-linux
-          chmod +x dist/card-game-linux
+          mv dist/main dist/tractor-ai-linux
+          chmod +x dist/tractor-ai-linux
           cd dist
-          zip card-game-linux.zip card-game-linux
+          zip tractor-ai-linux.zip tractor-ai-linux
 
       - name: Package macOS
         if: matrix.artifact == 'macos'
         run: |
-          mv dist/main dist/card-game-macos
-          chmod +x dist/card-game-macos
+          mv dist/main dist/tractor-ai-macos
+          chmod +x dist/tractor-ai-macos
           cd dist
-          zip card-game-macos.zip card-game-macos
+          zip tractor-ai-macos.zip tractor-ai-macos
 
       - name: Package Windows
         if: matrix.artifact == 'windows'
         shell: cmd
         run: |
-          ren dist\main.exe card-game-windows.exe
+          ren dist\main.exe tractor-ai-windows.exe
 
       - name: Upload Linux
         if: matrix.artifact == 'linux'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/card-game-linux.zip
+          files: dist/tractor-ai-linux.zip
 
       - name: Upload macOS
         if: matrix.artifact == 'macos'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/card-game-macos.zip
+          files: dist/tractor-ai-macos.zip
 
       - name: Upload Windows
         if: matrix.artifact == 'windows'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/card-game-windows.exe
+          files: dist/tractor-ai-windows.exe
