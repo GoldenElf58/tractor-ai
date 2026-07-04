@@ -18,6 +18,8 @@ def main() -> None:
             if move_str == "": break
             if move_str == "a" or move_str == "auto":
                 auto = not auto
+                print(f"Auto mode: {auto}")
+                continue
             if move_str == "h" or move_str == "help":
                 print(f"Game Phase: {game_state.phase}")
                 print(f"Dominant Rank: {game_state.dominant_rank}")
@@ -28,6 +30,7 @@ def main() -> None:
                     print(f"Trump Suit: {game_state.trump_suit}")
                     print(f"Trick Leader: {game_state.trick_leader}")
                 print()
+                continue
             if move_str.isnumeric():
                 move = int(move_str)
                 if 0 <= move < len(moves): break
