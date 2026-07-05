@@ -49,31 +49,36 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) an
 Once you start the game, each player will be prompted to make a move. For example:
 
 ```
-Player 0 move
+Player 1 move
 Hand: Jack of Spades, 3 of Hearts, 5 of Hearts, Queen of Hearts, 7 of Diamonds, 8 of Diamonds, Queen of Diamonds, Ace of Diamonds, Queen of Clubs, Little Joker, Little Joker
-Available moves:
-0 : Pass
-1 : Pair of Little Joker
+Available Moves:
+1 : Pass
+2 : Pair of Little Joker
 
-Enter move index:
+Enter move index or command:
 ```
 
 Then, simply enter the index of the move you want to make. If you want more information about the
-game you can type "h" or "help" to view that information. For example:
+game you can type "i" or "info" to view that information. For example:
 
 ```
-Enter move index: h
+Enter move index or command: info
 Game Phase: Drawing Phase
 Dominant Rank: 2
 Bid: 2 of Hearts
 Bid Owner: 3
 
-Enter move index:
+Enter move index or command:
 ```
 
-If you are just testing the game out for yourself and want to skip through all player's turns that
-only have one action, you can type "a" or "auto" to toggle auto mode.
+If you want information about other commands available, you can type "h" or "help".
 
 ```
-Enter move index: auto
+Enter move index or command: help
+Commands:
+'h' or 'help' - Views this help message.
+'q' or 'quit' - Quits the game.
+'i' or 'info' - Views the current game state.
+'' - Makes the first move (typing nothing).
+'a' or 'auto' - Toggles automatic move mode. This will automatically make a move for you if there is only one possible move.
 ```
