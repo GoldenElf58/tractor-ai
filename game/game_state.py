@@ -4,6 +4,7 @@ from random import shuffle
 from .bid import Bid
 from .card import Card
 from .effective_suit import EffectiveSuit
+from .move import Move
 from .phase import Phase
 from .play import Play
 from .player import Player
@@ -12,13 +13,13 @@ from .face_suit import FaceSuit
 
 def generate_deck() -> list[Card]:
     deck: list[Card] = []
-    for suit in (FaceSuit.SPADE, FaceSuit.DIAMOND, FaceSuit.HEART, FaceSuit.CLUB):
+    for suit in (FaceSuit.SPADES, FaceSuit.DIAMONDS, FaceSuit.HEARTS, FaceSuit.CLUBS):
         for value in range(2, 15):
-            deck.append(Card(suit, value))
-            deck.append(Card(suit, value))
+            deck.append(Card(suit, value, 1))
+            deck.append(Card(suit, value, 2))
     for i in range(2):
-        deck.append(Card(FaceSuit.JOKER, 16))
-        deck.append(Card(FaceSuit.JOKER, 17))
+        deck.append(Card(FaceSuit.JOKER, 16, i + 1))
+        deck.append(Card(FaceSuit.JOKER, 17, i + 1))
     shuffle(deck)
     return deck
 
@@ -74,30 +75,30 @@ class GameState:
         return self.players[self.active_player]
 
     def show_current_hand(self) -> str:
-        return self.get_active_player().show_hand(self.trump_suit, self.dominant_rank)
+        return self.get_active_player().show_hand()
 
     def show_current_trick(self) -> str:
         return ', '.join(map(str, self.curr_trick))
 
-    def generate_moves(self) -> list[Bid | Card | Play]:
+    def generate_moves(self) -> list[Move]:
         if self.phase == Phase.DRAWING:
-            return self.generate_bid_moves()
+            return [Move(bid) for bid in self.generate_bid_moves()]
         elif self.phase == Phase.BURYING:
-            return self.generate_bury_moves()
+            return [Move(card) for card in self.generate_bury_moves()]
         elif self.phase == Phase.TRICK_TAKING:
-            return self.generate_trick_moves()
+            return [Move(play) for play in self.generate_trick_moves()]
         return []
 
-    def move(self, move: Bid | Card | Play):
+    def move(self, move: Move):
         if self.phase == Phase.DRAWING:
-            if not isinstance(move, Bid): raise ValueError("Not a bid")
-            self.move_bid(move)
+            if not isinstance(move.move, Bid): raise ValueError("Not a bid")
+            self.move_bid(move.move)
         elif self.phase == Phase.BURYING:
-            if not isinstance(move, Card): raise ValueError("Not a bury move")
-            self.move_bury(move)
+            if not isinstance(move.move, Card): raise ValueError("Not a bury move")
+            self.move_bury(move.move)
         elif self.phase == Phase.TRICK_TAKING:
-            if not isinstance(move, Play): raise ValueError("Not a trick-taking move")
-            self.move_trick(move)
+            if not isinstance(move.move, Play): raise ValueError("Not a trick-taking move")
+            self.move_trick(move.move)
         else:
             raise ValueError("Not in valid phase")
 
@@ -117,7 +118,8 @@ class GameState:
 
     def generate_bid_candidates(self) -> list[Card]:
         cards: list[Card] = self.get_active_player().cards
-        return [card for card in cards if card.rank == self.dominant_rank or card.suit == FaceSuit.JOKER]
+        return [card for card in cards if
+                card.rank == self.dominant_rank or card.suit == FaceSuit.JOKER]
 
     def higher_bid(self, bid: Bid) -> bool:
         if bid.empty_bid: return False
@@ -139,8 +141,9 @@ class GameState:
             else:
                 quantity = 1
             bid_candidate: Bid = Bid(False, card, quantity, self.active_player)
-            valid_bid: bool = (self.higher_bid(bid_candidate) and (not leader or card == self.bid.card) and
-                               (bid_candidate.card.suit != FaceSuit.JOKER or bid_candidate.quantity == 2))
+            valid_bid: bool = (
+                    self.higher_bid(bid_candidate) and (not leader or card == self.bid.card) and
+                    (bid_candidate.card.suit != FaceSuit.JOKER or bid_candidate.quantity == 2))
             if valid_bid:
                 moves.append(bid_candidate)
         return moves
@@ -156,8 +159,10 @@ class GameState:
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
             self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
+            for player in self.players:
+                player.sort_hand(self.trump_suit, self.dominant_rank)
         else:
-            self.get_active_player().draw_card(self.deck.pop())
+            self.get_active_player().draw_card(self.deck.pop(), self.dominant_rank)
         if move.empty_bid: return
         if not self.higher_bid(move): raise ValueError("Not higher bid")
         self.bid = move
@@ -167,31 +172,36 @@ class GameState:
         all_plays: list[Play] = []
         for card in self.get_active_player().cards:
             play: Play = Play(card, None, 1, self.active_player)
-            if play not in all_plays:
-                all_plays.append(play)
-            else:
-                all_plays.append(Play(card, card, 2, self.active_player))
+            if play in all_plays:
+                all_plays.append(Play(card.with_other_version(), card, 2, self.active_player))
+            all_plays.append(play)
         if len(self.curr_trick) == 0:
             return all_plays
-        candidate_plays = [play for play in all_plays if play.card.suit == self.curr_trick[0].card.suit and
+        candidate_plays = [play for play in all_plays if
+                           play.card.suit == self.curr_trick[0].card.suit and
                            play.quantity == self.curr_trick[0].quantity]
         if len(candidate_plays) == 0:
             if self.curr_trick[0].quantity == 1: return all_plays
             plays: list[Play] = []
-            num_matching_led_suit: int = sum(
-                1 for card in self.get_active_player().cards if card.suit == self.curr_trick[0].card.suit)
+            num_matching_led_suit: int = sum(1 for card in self.get_active_player().cards if
+                                             card.suit == self.curr_trick[0].card.suit)
             for i, card_1 in enumerate(self.get_active_player().cards):
-                if num_matching_led_suit >= 1 and card_1.suit != self.curr_trick[0].card.suit: continue
+                if num_matching_led_suit >= 1 and card_1.suit != self.curr_trick[
+                    0].card.suit: continue
                 for j, card_2 in enumerate(self.get_active_player().cards):
                     if i >= j: continue
-                    if num_matching_led_suit >= 2 and card_2.suit != self.curr_trick[0].card.suit: continue
+                    if num_matching_led_suit >= 2 and card_2.suit != self.curr_trick[
+                        0].card.suit: continue
                     play: Play = Play(card_1, card_2, 2, self.active_player)
                     plays.append(play)
+            pairs = [play for play in plays if play.is_pair()]
+            if len(pairs) > 0: return pairs
             return plays
         return candidate_plays
 
     def determine_trick_winner(self) -> int:
-        lead_suit: EffectiveSuit = self.curr_trick[0].card.get_effective_suit(self.trump_suit, self.dominant_rank)
+        lead_suit: EffectiveSuit = self.curr_trick[0].card.get_effective_suit(self.trump_suit,
+                                                                              self.dominant_rank)
         best_card: Card = self.curr_trick[0].card
         best_card_index: int = 0
         for i, play in enumerate(self.curr_trick):
@@ -247,7 +257,9 @@ class GameState:
     def score_points(self, trick_winner: int):
         player_a: int = (self.round_leader + 1) % 4
         player_b: int = (self.round_leader + 3) % 4
-        self.offense_points = sum(get_trick_points(trick) for trick in (*self.players[player_a].tricks,
-                                                                        *self.players[player_b].tricks))
+        self.offense_points = sum(
+            get_trick_points(trick) for trick in (*self.players[player_a].tricks,
+                                                  *self.players[player_b].tricks))
         if trick_winner == player_a or trick_winner == player_b:
-            self.offense_points += sum(get_card_points(card) for card in self.trash) * self.curr_trick[0].quantity * 2
+            self.offense_points += sum(get_card_points(card) for card in self.trash) * \
+                                   self.curr_trick[0].quantity * 2

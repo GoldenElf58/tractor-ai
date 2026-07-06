@@ -1,8 +1,9 @@
-from enum import Enum, auto
+from enum import Enum
+
 
 class EffectiveSuit(Enum):
-    SPADE = auto()
-    HEART = auto()
-    DIAMOND = auto()
-    CLUB = auto()
-    TRUMP = auto()
+    DIAMONDS = 1
+    CLUBS = 2
+    HEARTS = 3
+    SPADES = 4
+    TRUMP = 5

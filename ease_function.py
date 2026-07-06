@@ -1,0 +1,6 @@
+from typing import Protocol
+
+class EaseFunction(Protocol):
+    def __call__(self, start: float, end: float, t: float) -> float: ...
+
+    def inverse(self, start: float, end: float, value: float) -> float: ...
