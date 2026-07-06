@@ -2,6 +2,7 @@ from dataclasses import dataclass
 
 from .effective_suit import EffectiveSuit
 from .face_suit import FaceSuit
+from .trump_info import TrumpInfo
 
 
 @dataclass
@@ -9,6 +10,11 @@ class Card:
     suit: FaceSuit
     rank: int
     version: int
+
+    def as_effective(self, trump_info: TrumpInfo | None) -> EffectiveSuit:
+        return self.suit.as_effective() if (trump_info is None or self.suit != trump_info.trump_suit
+                                            and self.rank != trump_info.dominant_rank) \
+            else EffectiveSuit.TRUMP
 
     def get_effective_suit(self, trump_suit: FaceSuit, dominant_rank: int) -> EffectiveSuit:
         return self.suit.as_effective() if self.suit != trump_suit and self.rank != dominant_rank \

@@ -9,6 +9,7 @@ from .phase import Phase
 from .play import Play
 from .player import Player
 from .face_suit import FaceSuit
+from .trump_info import TrumpInfo
 
 
 def generate_deck() -> list[Card]:
@@ -50,6 +51,7 @@ class GameState:
         self.trump_suit: FaceSuit = FaceSuit.JOKER
         self.phase: Phase = Phase.DRAWING
         self.offense_points: int = 0
+        self.trump_info: TrumpInfo | None = None
         self.setup_game()
 
     def setup_game(self) -> None:
@@ -156,6 +158,7 @@ class GameState:
         self.active_player = (self.active_player + 1) % self.num_players
         if self.active_player == 0 and len(self.deck) <= 8:
             self.phase = Phase.BURYING
+            self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
             self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
@@ -178,20 +181,24 @@ class GameState:
         if len(self.curr_trick) == 0:
             return all_plays
         candidate_plays = [play for play in all_plays if
-                           play.card.suit == self.curr_trick[0].card.suit and
+                           play.card.as_effective(self.trump_info) ==
+                           self.curr_trick[0].card.as_effective(self.trump_info) and
                            play.quantity == self.curr_trick[0].quantity]
         if len(candidate_plays) == 0:
             if self.curr_trick[0].quantity == 1: return all_plays
             plays: list[Play] = []
             num_matching_led_suit: int = sum(1 for card in self.get_active_player().cards if
-                                             card.suit == self.curr_trick[0].card.suit)
+                                             card.as_effective(self.trump_info) ==
+                                             self.curr_trick[0].card.as_effective(self.trump_info))
             for i, card_1 in enumerate(self.get_active_player().cards):
-                if num_matching_led_suit >= 1 and card_1.suit != self.curr_trick[
-                    0].card.suit: continue
+                if (num_matching_led_suit >= 1 and
+                        card_1.as_effective(self.trump_info) !=
+                        self.curr_trick[0].card.as_effective(self.trump_info)): continue
                 for j, card_2 in enumerate(self.get_active_player().cards):
                     if i >= j: continue
-                    if num_matching_led_suit >= 2 and card_2.suit != self.curr_trick[
-                        0].card.suit: continue
+                    if (num_matching_led_suit >= 2 and
+                            card_2.as_effective(self.trump_info) !=
+                            self.curr_trick[0].card.as_effective(self.trump_info)): continue
                     play: Play = Play(card_1, card_2, 2, self.active_player)
                     plays.append(play)
             pairs = [play for play in plays if play.is_pair()]
