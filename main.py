@@ -24,14 +24,8 @@ CARD_SEPARATION: int = 25
 PEAK_HEIGHT: int = 15
 HEIGHT_INCREASE: int = 30
 
-WIDTH = 720
-HEIGHT = 480
-
-MOVE_BUTTON_WIDTH: int = 100
-MOVE_BUTTON_HEIGHT: int = 50
-MOVE_BUTTON_BORDER_RADIUS: int = 10
-MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
-MOVE_BUTTON_FONT_SIZE: int = 20
+WIDTH = 1080
+HEIGHT = 720
 
 images: dict[Card, Surface] = {
     card: smoothscale_by(pygame.image.load(f"assets/cards/{card.get_filename()}"),
@@ -42,6 +36,15 @@ hover_anim: dict[Card, Animation] = {card: Animation(539, 539, 539, 0, ease_out_
 card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
 selected_cards: set[Card] = set()
 mouse_start_pressing_move_button: bool = False
+
+HAND_X: int = WIDTH // 2
+HAND_Y: int = HEIGHT - images[Card(FaceSuit.JOKER, 17, 1)].get_height() - CARD_SEPARATION
+
+MOVE_BUTTON_WIDTH: int = 100
+MOVE_BUTTON_HEIGHT: int = 50
+MOVE_BUTTON_BORDER_RADIUS: int = 10
+MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
+MOVE_BUTTON_FONT_SIZE: int = 20
 
 
 def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
@@ -60,7 +63,10 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
                                 start_x + i * CARD_SEPARATION + images[card].get_width())
         if mouse_clicked and hovering:
             card_selection[card] = not card_selection[card]
-            if card_selection[card]:
+            if moves[0].type == Phase.BURYING and card_selection[card]:
+                if len(selected_cards) < 8:
+                    selected_cards.add(card)
+            elif card_selection[card]:
                 selected_cards.add(card)
                 possible_moves: list[Move] = [move for move in moves if card in move]
                 for secondary_card in selected_cards:
@@ -81,7 +87,8 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
             hover_anim[card].set_bounds(y - PEAK_HEIGHT if
                                         hover_anim[card].current == y - PEAK_HEIGHT else y,
                                         y - HEIGHT_INCREASE)
-        elif hovering and any(card in move for move in moves):
+        elif hovering and (any(card in move for move in moves) and
+                           (moves[0].type != Phase.BURYING or len(selected_cards) < 8)):
             hover_anim[card].set_bounds(y - HEIGHT_INCREASE if
                                         hover_anim[card].current < y - PEAK_HEIGHT else y,
                                         y - PEAK_HEIGHT)
@@ -91,7 +98,7 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
         screen.blit(images[card], (start_x + i * CARD_SEPARATION, hover_anim[card].current))
 
 
-def display_move_button(screen: Surface, move_rect: Rect, move: Move, font: Font) -> bool:
+def display_move_button(screen: Surface, move_rect: Rect, move: Move | None, font: Font) -> bool:
     global mouse_start_pressing_move_button
     if move is None: return False
     mouse_x: int = pygame.mouse.get_pos()[0]
@@ -104,7 +111,7 @@ def display_move_button(screen: Surface, move_rect: Rect, move: Move, font: Font
                      border_radius=MOVE_BUTTON_BORDER_RADIUS)
     text: str = "Play" if move.type == Phase.TRICK_TAKING else "Discard" \
         if move.type == Phase.BURYING else "Bid" \
-        if isinstance(move, Bid) and not move.empty_bid else "Pass"
+        if isinstance(move.move, Bid) and not move.move.empty_bid else "Pass"
     text_surface: Surface = font.render(text, True, (255, 255, 255))
     screen.blit(text_surface, (move_rect.centerx - text_surface.get_width() // 2,
                                move_rect.centery - text_surface.get_height() // 2))
@@ -114,9 +121,16 @@ def display_move_button(screen: Surface, move_rect: Rect, move: Move, font: Font
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:
+    if moves[0].type == Phase.BURYING:
+        if len(selected_cards) == 8:
+            return Move(list(selected_cards))
+        return None
     for move in moves:
         if move.cards_match(list(selected_cards)):
             return move
+    if moves[0].type == Phase.DRAWING:
+        for move in moves:
+            if isinstance(move.move, Bid) and move.move.empty_bid: return move
     return None
 
 
@@ -126,13 +140,10 @@ def gui_game_loop() -> None:
     clock: Clock = pygame.time.Clock()
     font: Font = pygame.font.SysFont("arial", MOVE_BUTTON_FONT_SIZE)
     game_state: GameState = GameState()
-    while game_state.phase == Phase.DRAWING or game_state.phase == Phase.BURYING:
-        game_state.move(game_state.generate_moves()[0])
     moves: list[Move] = game_state.generate_moves()
     move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
                            MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
                            MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
-    print(game_state.trump_suit)
     while True:
         delta_time: float = clock.tick(60)
         for event in pygame.event.get():
@@ -140,7 +151,7 @@ def gui_game_loop() -> None:
                 pygame.quit()
                 return
         screen.fill(0)
-        display_hand(screen, game_state.get_active_player().cards, (WIDTH // 2, 400),
+        display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
         move_requested: bool = display_move_button(screen, move_rect, get_selected_move(moves),
                                                    font)
@@ -150,7 +161,9 @@ def gui_game_loop() -> None:
                 game_state.move(selected_move)
                 moves = game_state.generate_moves()
                 selected_cards.clear()
+                y = HAND_Y - images[Card(FaceSuit.JOKER, 17, 1)].get_height() // 2
                 for card in card_selection:
+                    hover_anim[card].current = y
                     card_selection[card] = False
         pygame.display.flip()
 

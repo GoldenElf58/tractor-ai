@@ -96,8 +96,13 @@ class GameState:
             if not isinstance(move.move, Bid): raise ValueError("Not a bid")
             self.move_bid(move.move)
         elif self.phase == Phase.BURYING:
-            if not isinstance(move.move, Card): raise ValueError("Not a bury move")
-            self.move_bury(move.move)
+            if isinstance(move.move, Card):
+                self.move_bury(move.move)
+            elif not isinstance(move.move, list): raise ValueError("Not a bury move")
+            else:
+                for card in move.move:
+                    if not isinstance(card, Card): raise ValueError("Not a bury move")
+                    self.move_bury(card)
         elif self.phase == Phase.TRICK_TAKING:
             if not isinstance(move.move, Play): raise ValueError("Not a trick-taking move")
             self.move_trick(move.move)

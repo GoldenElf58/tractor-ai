@@ -8,12 +8,12 @@ from game.play import Play
 
 @dataclass
 class Move:
-    move: Bid | Card | Play
+    move: Bid | Card | Play | list[Card]
     type: Phase
 
-    def __init__(self, move: Bid | Card | Play):
+    def __init__(self, move: Bid | Card | Play | list[Card]):
         self.move = move
-        self.type = Phase.DRAWING if isinstance(move, Card) else Phase.TRICK_TAKING \
+        self.type = Phase.DRAWING if isinstance(move, Bid) else Phase.TRICK_TAKING \
             if isinstance(move, Play) else Phase.BURYING
 
     def cards_match(self, cards: list[Card]):
@@ -21,6 +21,9 @@ class Move:
             return isinstance(self.move, Bid) and self.move.empty_bid is None
         if isinstance(self.move, Card):
             return len(cards) == 1 and self.move == cards[0]
+        if isinstance(self.move, list):
+            return (len(cards) == len(self.move)
+                    and all(card == self.move[i] for i, card in enumerate(cards)))
         if isinstance(self.move, Bid):
             return (len(cards) == self.move.quantity and
                     all(card == self.move.card for card in cards))
@@ -36,7 +39,7 @@ class Move:
         if isinstance(self.move, Card):
             return self.move.exact_card(item)
         if isinstance(self.move, Bid):
-            return self.move.card.exact_card(item)
+            return self.move.card is not None and self.move.card.exact_card(item)
         if isinstance(self.move, Play):
             return (self.move.card.exact_card(item) or
                     (self.move.card_2 and self.move.card_2.exact_card(item)))
