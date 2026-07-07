@@ -39,7 +39,7 @@ class Move:
         if isinstance(self.move, Card):
             return self.move.exact_card(item)
         if isinstance(self.move, Bid):
-            return self.move.card is not None and self.move.card.exact_card(item)
+            return self.move.card is not None and self.move.card == item
         if isinstance(self.move, Play):
             return (self.move.card.exact_card(item) or
                     (self.move.card_2 and self.move.card_2.exact_card(item)))

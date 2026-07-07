@@ -1,13 +1,16 @@
 import pygame
-from pygame import Surface, Clock, Font
+from pygame import Surface, Clock, Font, Color, font
 from pygame.rect import Rect
 from pygame.transform import smoothscale_by
 
 from animation import Animation
+from button import Button
 from game import Card, GameState, Phase, FaceSuit, Bid
 from game.game_state import generate_deck
 from game.move import Move
 from utils import ease_out_cubic
+
+pygame.init()
 
 HELP_TEXT: str = ("Commands:\n"
                   "'h' or 'help' - Views this help message.\n"
@@ -39,13 +42,34 @@ MOVE_BUTTON_WIDTH: int = 100
 MOVE_BUTTON_HEIGHT: int = 50
 MOVE_BUTTON_BORDER_RADIUS: int = 10
 MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
-MOVE_BUTTON_FONT_SIZE: int = 20
+
+AUTO_MOVE_BUTTON_WIDTH: int = 100
+AUTO_MOVE_BUTTON_HEIGHT: int = 50
+AUTO_MOVE_BUTTON_BORDER_RADIUS: int = 10
+AUTO_MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2,
+                                         HEIGHT // 2 + MOVE_BUTTON_HEIGHT + CARD_SEPARATION)
+
+FONT: Font = font.SysFont("arial", 20)
+AUTO_PASS_TIME: int = 100  # ms
+AUTO_PLAY_TIME: int = 1000  # ms
 
 hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, ease_out_cubic)
                                      for card in generate_deck()}
 card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
 selected_cards: set[Card] = set()
 mouse_start_pressing_move_button: bool = False
+move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
+                       MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
+                       MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
+move_button: Button = Button(move_rect, "", FONT, Color(255, 255, 255), Color(80, 80, 80),
+                             Color(100, 100, 100), Color(120, 120, 120), MOVE_BUTTON_BORDER_RADIUS)
+auto_move_rect: Rect = Rect(AUTO_MOVE_BUTTON_POS[0] - AUTO_MOVE_BUTTON_WIDTH // 2,
+                            AUTO_MOVE_BUTTON_POS[1] - AUTO_MOVE_BUTTON_HEIGHT // 2,
+                            AUTO_MOVE_BUTTON_WIDTH, AUTO_MOVE_BUTTON_HEIGHT)
+auto_move_button: Button = Button(auto_move_rect, "", FONT,
+                                  Color(255, 255, 255), Color(80, 80, 80),
+                                  Color(100, 100, 100), Color(120, 120, 120),
+                                  MOVE_BUTTON_BORDER_RADIUS)
 
 
 def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
@@ -61,7 +85,8 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
                           and hover_anim[card].end <= mouse_pos[1] < y + images[card].get_height())
         hovering = hovering or (hover_anim[card].end <= mouse_pos[1] < y and
                                 start_x + i * CARD_SEPARATION <= mouse_pos[0] <
-                                start_x + i * CARD_SEPARATION + images[card].get_width())
+                                start_x + i * CARD_SEPARATION + images[card].get_width() and
+                                (i == len(hand) - 1 or hover_anim[hand[i + 1]].end > mouse_pos[1]))
         if mouse_clicked and hovering:
             card_selection[card] = not card_selection[card]
             if moves[0].type == Phase.BURYING and card_selection[card]:
@@ -101,26 +126,18 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
         screen.blit(images[card], (start_x + i * CARD_SEPARATION, hover_anim[card].current))
 
 
-def display_move_button(screen: Surface, move_rect: Rect, move: Move | None, font: Font) -> bool:
-    global mouse_start_pressing_move_button
+def display_move_button(screen: Surface, move: Move | None) -> bool:
     if move is None: return False
-    mouse_x: int = pygame.mouse.get_pos()[0]
-    mouse_y: int = pygame.mouse.get_pos()[1]
-    mouse_down: bool = pygame.mouse.get_pressed()[0]
-    hovering = move_rect.collidepoint(mouse_x, mouse_y)
-    shade = 120 if mouse_down and hovering and mouse_start_pressing_move_button \
-        else 100 if hovering else 80
-    pygame.draw.rect(screen, (shade, shade, shade), move_rect,
-                     border_radius=MOVE_BUTTON_BORDER_RADIUS)
     text: str = "Play" if move.type == Phase.TRICK_TAKING else "Discard" \
         if move.type == Phase.BURYING else "Bid" \
         if isinstance(move.move, Bid) and not move.move.empty_bid else "Pass"
-    text_surface: Surface = font.render(text, True, (255, 255, 255))
-    screen.blit(text_surface, (move_rect.centerx - text_surface.get_width() // 2,
-                               move_rect.centery - text_surface.get_height() // 2))
-    if pygame.mouse.get_just_pressed()[0]:
-        mouse_start_pressing_move_button = hovering
-    return pygame.mouse.get_just_released()[0] and hovering and mouse_start_pressing_move_button
+    move_button.set_text(text)
+    return move_button.display(screen)
+
+
+def display_auto_move_button(screen: Surface, automatic_pass: bool) -> bool:
+    auto_move_button.set_text("Auto: On" if automatic_pass else "Auto: Off")
+    return auto_move_button.display(screen)
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:
@@ -145,7 +162,7 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
                  (f"Bid: {game_state.bid} from Player {game_state.bid.owner}\n"
                   if not game_state.bid.empty_bid and game_state.phase == Phase.DRAWING else "") +
                  f"Dominant Rank: {game_state.dominant_rank}\n" + (
-                     f"Trump Suit: {game_state.trump_suit}\n"
+                     f"Trump Suit: {game_state.trump_suit.trump_str()}\n"
                      if game_state.phase != Phase.DRAWING else ""
                  ))
     text_surface: Surface = font.render(text, True, (255, 255, 255))
@@ -158,14 +175,12 @@ def gui_game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT))
     clock: Clock = pygame.time.Clock()
-    font: Font = pygame.font.SysFont("arial", MOVE_BUTTON_FONT_SIZE)
     game_state: GameState = GameState()
-    while game_state.phase == Phase.DRAWING:
-        game_state.move(game_state.generate_moves()[0])
+    # while game_state.phase == Phase.DRAWING:
+    #     game_state.move(game_state.generate_moves()[0])
     moves: list[Move] = game_state.generate_moves()
-    move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
-                           MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
-                           MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
+    automatic_pass: bool = False
+    last_move_time: float = pygame.time.get_ticks()
     while True:
         delta_time: float = clock.tick(60)
         for event in pygame.event.get():
@@ -175,12 +190,17 @@ def gui_game_loop() -> None:
         screen.fill(0)
         display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
-        move_requested: bool = display_move_button(screen, move_rect, get_selected_move(moves),
-                                                   font)
-        display_info(screen, game_state, font)
-        if move_requested:
+        move_requested: bool = display_move_button(screen, get_selected_move(moves))
+        display_info(screen, game_state, FONT)
+        if display_auto_move_button(screen, automatic_pass):
+            automatic_pass = not automatic_pass
+        if move_requested or (automatic_pass and len(moves) == 1 and
+                              pygame.time.get_ticks() - last_move_time > (
+                                      AUTO_PASS_TIME if game_state.phase == Phase.DRAWING else
+                                      AUTO_PLAY_TIME)):
             selected_move = get_selected_move(moves)
             if selected_move is not None:
+                last_move_time = pygame.time.get_ticks()
                 game_state.move(selected_move)
                 moves = game_state.generate_moves()
                 selected_cards.clear()

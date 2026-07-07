@@ -23,6 +23,9 @@ class FaceSuit(Enum):
             case FaceSuit.JOKER:
                 return EffectiveSuit.TRUMP
 
+    def trump_str(self) -> str:
+        return "None" if self == FaceSuit.JOKER else self.__str__()
+
     def __str__(self) -> str:
         match self:
             case FaceSuit.SPADES:
