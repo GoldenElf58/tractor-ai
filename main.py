@@ -1,7 +1,7 @@
 import pygame
 from pygame import Surface, Clock, Font
-from pygame.transform import smoothscale_by
 from pygame.rect import Rect
+from pygame.transform import smoothscale_by
 
 from animation import Animation
 from game import Card, GameState, Phase, FaceSuit, Bid
@@ -31,20 +31,21 @@ images: dict[Card, Surface] = {
     card: smoothscale_by(pygame.image.load(f"assets/cards/{card.get_filename()}"),
                          CARD_SCALE_FACTOR) for card in generate_deck()
 }
-hover_anim: dict[Card, Animation] = {card: Animation(539, 539, 539, 0, ease_out_cubic)
-                                     for card in generate_deck()}
-card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
-selected_cards: set[Card] = set()
-mouse_start_pressing_move_button: bool = False
 
 HAND_X: int = WIDTH // 2
-HAND_Y: int = HEIGHT - images[Card(FaceSuit.JOKER, 17, 1)].get_height() - CARD_SEPARATION
+HAND_Y: int = HEIGHT - images[Card(FaceSuit.JOKER, 17, 1)].get_height() // 2 - CARD_SEPARATION
 
 MOVE_BUTTON_WIDTH: int = 100
 MOVE_BUTTON_HEIGHT: int = 50
 MOVE_BUTTON_BORDER_RADIUS: int = 10
 MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
 MOVE_BUTTON_FONT_SIZE: int = 20
+
+hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, ease_out_cubic)
+                                     for card in generate_deck()}
+card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
+selected_cards: set[Card] = set()
+mouse_start_pressing_move_button: bool = False
 
 
 def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
@@ -66,6 +67,8 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
             if moves[0].type == Phase.BURYING and card_selection[card]:
                 if len(selected_cards) < 8:
                     selected_cards.add(card)
+                else:
+                    card_selection[card] = False
             elif card_selection[card]:
                 selected_cards.add(card)
                 possible_moves: list[Move] = [move for move in moves if card in move]
@@ -134,12 +137,31 @@ def get_selected_move(moves: list[Move]) -> Move | None:
     return None
 
 
+def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
+    text: str = (f"{game_state.phase} - Player {game_state.active_player} Turn\n"
+                 f"Round Leader: Player {game_state.round_leader}\n" + (
+                     f"Trick Leader: Player {game_state.trick_leader}\n"
+                     if game_state.phase == Phase.TRICK_TAKING else "") +
+                 (f"Bid: {game_state.bid} from Player {game_state.bid.owner}\n"
+                  if not game_state.bid.empty_bid and game_state.phase == Phase.DRAWING else "") +
+                 f"Dominant Rank: {game_state.dominant_rank}\n" + (
+                     f"Trump Suit: {game_state.trump_suit}\n"
+                     if game_state.phase != Phase.DRAWING else ""
+                 ))
+    text_surface: Surface = font.render(text, True, (255, 255, 255))
+    info_rect: Rect = text_surface.get_rect(topleft=(25, 25))
+    pygame.draw.rect(screen, (0, 0, 0), info_rect)
+    screen.blit(text_surface, (25, 25))
+
+
 def gui_game_loop() -> None:
     pygame.init()
     screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT))
     clock: Clock = pygame.time.Clock()
     font: Font = pygame.font.SysFont("arial", MOVE_BUTTON_FONT_SIZE)
     game_state: GameState = GameState()
+    while game_state.phase == Phase.DRAWING:
+        game_state.move(game_state.generate_moves()[0])
     moves: list[Move] = game_state.generate_moves()
     move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
                            MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
@@ -155,6 +177,7 @@ def gui_game_loop() -> None:
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
         move_requested: bool = display_move_button(screen, move_rect, get_selected_move(moves),
                                                    font)
+        display_info(screen, game_state, font)
         if move_requested:
             selected_move = get_selected_move(moves)
             if selected_move is not None:
