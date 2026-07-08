@@ -1,11 +1,11 @@
 import pygame
-from pygame import Surface, Clock, Font, Color, font
+from pygame import Surface, Clock, Font, Color
 from pygame.rect import Rect
 from pygame.transform import smoothscale_by
 
 from animation import Animation
 from button import Button
-from game import Card, GameState, Phase, FaceSuit, Bid
+from game import Card, GameState, Phase, FaceSuit, Bid, Play
 from game.game_state import generate_deck
 from game.move import Move
 from utils import ease_out_cubic
@@ -23,7 +23,7 @@ HELP_TEXT: str = ("Commands:\n"
 
 ANIMATION_TIME: float = 0.3
 CARD_SCALE_FACTOR: float = 0.17
-CARD_SEPARATION: int = 25
+PADDING: int = 25
 PEAK_HEIGHT: int = 15
 HEIGHT_INCREASE: int = 30
 
@@ -35,23 +35,33 @@ images: dict[Card, Surface] = {
                          CARD_SCALE_FACTOR) for card in generate_deck()
 }
 
+CARD_WIDTH: int = images[Card(FaceSuit.JOKER, 17, 1)].get_width()
+CARD_HEIGHT: int = images[Card(FaceSuit.JOKER, 17, 1)].get_height()
+
 HAND_X: int = WIDTH // 2
-HAND_Y: int = HEIGHT - images[Card(FaceSuit.JOKER, 17, 1)].get_height() // 2 - CARD_SEPARATION
+HAND_Y: int = HEIGHT - CARD_HEIGHT - PADDING // 2
 
 MOVE_BUTTON_WIDTH: int = 100
 MOVE_BUTTON_HEIGHT: int = 50
 MOVE_BUTTON_BORDER_RADIUS: int = 10
-MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
+MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2 - CARD_HEIGHT // 2)
 
 AUTO_MOVE_BUTTON_WIDTH: int = 100
 AUTO_MOVE_BUTTON_HEIGHT: int = 50
 AUTO_MOVE_BUTTON_BORDER_RADIUS: int = 10
-AUTO_MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2,
-                                         HEIGHT // 2 + MOVE_BUTTON_HEIGHT + CARD_SEPARATION)
+AUTO_MOVE_BUTTON_POS: tuple[int, int] = (AUTO_MOVE_BUTTON_WIDTH // 2 + PADDING * 2,
+                                         HEIGHT - AUTO_MOVE_BUTTON_HEIGHT // 2 - PADDING)
 
-FONT: Font = font.SysFont("arial", 20)
+FONT: Font = pygame.font.SysFont("arial", 20)
 AUTO_PASS_TIME: int = 100  # ms
 AUTO_PLAY_TIME: int = 1000  # ms
+
+CARD_POSITIONS: list[tuple[int, int]] = [
+    (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
+    (WIDTH // 2 - CARD_WIDTH // 2, PADDING * 2),
+    (WIDTH - PADDING * 2 - CARD_WIDTH, HEIGHT // 2 - CARD_HEIGHT // 2),
+    (WIDTH // 2 - CARD_WIDTH // 2, HEIGHT // 2)
+]
 
 hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, ease_out_cubic)
                                      for card in generate_deck()}
@@ -75,17 +85,16 @@ auto_move_button: Button = Button(auto_move_rect, "", FONT,
 def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
                  mouse_pos: tuple[int, int], delta_time: float, mouse_clicked: bool,
                  moves: list[Move]) -> None:
-    start_x = int(center_pos[0] - (len(hand) - 1) * (CARD_SEPARATION / 2)
-                  - (images[Card(FaceSuit.JOKER, 17, 1)].get_width()) / 2)
-    y = center_pos[1] - images[Card(FaceSuit.JOKER, 17, 1)].get_height() // 2
+    start_x = int(center_pos[0] - (len(hand) - 1) * (PADDING / 2) - CARD_WIDTH / 2)
+    y = center_pos[1] - CARD_HEIGHT // 2
     for i, card in enumerate(hand):
-        hovering: bool = (start_x + i * CARD_SEPARATION <= mouse_pos[0] <
-                          start_x + i * CARD_SEPARATION +
-                          (CARD_SEPARATION if i < len(hand) - 1 else images[card].get_width())
+        hovering: bool = (start_x + i * PADDING <= mouse_pos[0] <
+                          start_x + i * PADDING +
+                          (PADDING if i < len(hand) - 1 else images[card].get_width())
                           and hover_anim[card].end <= mouse_pos[1] < y + images[card].get_height())
         hovering = hovering or (hover_anim[card].end <= mouse_pos[1] < y and
-                                start_x + i * CARD_SEPARATION <= mouse_pos[0] <
-                                start_x + i * CARD_SEPARATION + images[card].get_width() and
+                                start_x + i * PADDING <= mouse_pos[0] <
+                                start_x + i * PADDING + images[card].get_width() and
                                 (i == len(hand) - 1 or hover_anim[hand[i + 1]].end > mouse_pos[1]))
         if mouse_clicked and hovering:
             card_selection[card] = not card_selection[card]
@@ -123,7 +132,7 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
         else:
             hover_anim[card].set_bounds(y - HEIGHT_INCREASE, y)
         hover_anim[card].update(delta_time / 1000.0 / ANIMATION_TIME)
-        screen.blit(images[card], (start_x + i * CARD_SEPARATION, hover_anim[card].current))
+        screen.blit(images[card], (start_x + i * PADDING, hover_anim[card].current))
 
 
 def display_move_button(screen: Surface, move: Move | None) -> bool:
@@ -138,6 +147,27 @@ def display_move_button(screen: Surface, move: Move | None) -> bool:
 def display_auto_move_button(screen: Surface, automatic_pass: bool) -> bool:
     auto_move_button.set_text("Auto: On" if automatic_pass else "Auto: Off")
     return auto_move_button.display(screen)
+
+
+def display_current_trick(screen: Surface, game_state: GameState) -> None:
+    if game_state.phase == Phase.DRAWING and (bid := game_state.bid).card is not None and \
+            not bid.empty_bid:
+        position: int = (game_state.active_player - bid.owner) % 4 - 1
+        x, y = CARD_POSITIONS[position]
+        screen.blit(images[bid.card],
+                    (x, y) if bid.quantity == 1 else (x - PADDING // 2, y))
+        if bid.quantity == 2:
+            screen.blit(images[bid.card], (x + PADDING // 2, y))
+        return
+    if game_state.phase != Phase.TRICK_TAKING: return
+    current_trick: list[Play] = game_state.curr_trick
+    for i, play in enumerate(reversed(current_trick)):
+        assert isinstance(play.card, Card)
+        x, y = CARD_POSITIONS[i]
+        screen.blit(images[play.card],
+                    (x, y) if play.quantity == 1 else (x - PADDING // 2, y))
+        if play.quantity == 2 and play.card_2 is not None:
+            screen.blit(images[play.card_2], (x + PADDING // 2, y))
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:
@@ -155,12 +185,10 @@ def get_selected_move(moves: list[Move]) -> Move | None:
 
 
 def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
-    text: str = (f"{game_state.phase} - Player {game_state.active_player} Turn\n"
-                 f"Round Leader: Player {game_state.round_leader}\n" + (
-                     f"Trick Leader: Player {game_state.trick_leader}\n"
+    text: str = (f"{game_state.phase}\n"
+                 f"Round Leader: Player {game_state.round_leader + 1}\n" + (
+                     f"Trick Leader: Player {game_state.trick_leader + 1}\n"
                      if game_state.phase == Phase.TRICK_TAKING else "") +
-                 (f"Bid: {game_state.bid} from Player {game_state.bid.owner}\n"
-                  if not game_state.bid.empty_bid and game_state.phase == Phase.DRAWING else "") +
                  f"Dominant Rank: {game_state.dominant_rank}\n" + (
                      f"Trump Suit: {game_state.trump_suit.trump_str()}\n"
                      if game_state.phase != Phase.DRAWING else ""
@@ -169,6 +197,10 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
     info_rect: Rect = text_surface.get_rect(topleft=(25, 25))
     pygame.draw.rect(screen, (0, 0, 0), info_rect)
     screen.blit(text_surface, (25, 25))
+    text_surface = font.render(f"Player {game_state.active_player + 1}", True, (255, 255, 255))
+    text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - PADDING * 1.5))
+    pygame.draw.rect(screen, (0, 0, 0), text_rect)
+    screen.blit(text_surface, text_rect)
 
 
 def gui_game_loop() -> None:
@@ -176,8 +208,6 @@ def gui_game_loop() -> None:
     screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT))
     clock: Clock = pygame.time.Clock()
     game_state: GameState = GameState()
-    # while game_state.phase == Phase.DRAWING:
-    #     game_state.move(game_state.generate_moves()[0])
     moves: list[Move] = game_state.generate_moves()
     automatic_pass: bool = False
     last_move_time: float = pygame.time.get_ticks()
@@ -192,8 +222,11 @@ def gui_game_loop() -> None:
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
         move_requested: bool = display_move_button(screen, get_selected_move(moves))
         display_info(screen, game_state, FONT)
-        if display_auto_move_button(screen, automatic_pass):
+        display_current_trick(screen, game_state)
+        if game_state.phase == Phase.DRAWING and display_auto_move_button(screen, automatic_pass):
             automatic_pass = not automatic_pass
+        elif automatic_pass and game_state.phase != Phase.DRAWING:
+            automatic_pass = False
         if move_requested or (automatic_pass and len(moves) == 1 and
                               pygame.time.get_ticks() - last_move_time > (
                                       AUTO_PASS_TIME if game_state.phase == Phase.DRAWING else
@@ -204,7 +237,7 @@ def gui_game_loop() -> None:
                 game_state.move(selected_move)
                 moves = game_state.generate_moves()
                 selected_cards.clear()
-                y = HAND_Y - images[Card(FaceSuit.JOKER, 17, 1)].get_height() // 2
+                y = HAND_Y - CARD_HEIGHT // 2
                 for card in card_selection:
                     hover_anim[card].current = y
                     card_selection[card] = False
