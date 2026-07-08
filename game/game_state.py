@@ -115,13 +115,14 @@ class GameState:
         return self.get_active_player().cards
 
     def move_bury(self, card: Card) -> None:
-        if self.active_player != 0: raise InvalidStateError("Active player should be 0")
+        if self.active_player != self.round_leader:
+            raise InvalidStateError("Active player should be the round leader")
         if card not in self.get_active_player().cards: raise ValueError("Invalid move")
         self.get_active_player().remove_card(card)
         self.trash.append(card)
         if len(self.get_active_player().cards) == len(self.players[1].cards):
             self.phase = Phase.TRICK_TAKING
-            self.active_player = self.trick_leader = self.bid.owner
+            self.trick_leader = self.active_player = self.round_leader
 
     def generate_bid_candidates(self) -> list[Card]:
         cards: list[Card] = self.get_active_player().cards
@@ -161,7 +162,7 @@ class GameState:
         moves: list[Bid] = self.generate_bid_moves()
         if move not in moves: raise ValueError("Invalid move")
         self.active_player = (self.active_player + 1) % self.num_players
-        if self.active_player == 0 and len(self.deck) <= 8:
+        if self.active_player == self.round_leader and len(self.deck) <= 8:
             self.phase = Phase.BURYING
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
