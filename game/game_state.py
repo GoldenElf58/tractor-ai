@@ -208,7 +208,7 @@ class GameState:
                     play: Play = Play(card_1, card_2, 2, self.active_player)
                     plays.append(play)
             pairs = [play for play in plays if play.is_pair()]
-            if len(pairs) > 0: return pairs
+            if num_matching_led_suit >= 2 and len(pairs) > 0: return pairs
             return plays
         return candidate_plays
 
