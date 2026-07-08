@@ -217,6 +217,9 @@ def gui_game_loop() -> None:
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE:
+                    automatic_pass = not automatic_pass and game_state.phase == Phase.DRAWING
         screen.fill(0)
         display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)

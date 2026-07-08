@@ -163,10 +163,10 @@ class GameState:
         self.active_player = (self.active_player + 1) % self.num_players
         if self.active_player == 0 and len(self.deck) <= 8:
             self.phase = Phase.BURYING
-            self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
             self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
+            self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             for player in self.players:
                 player.sort_hand(self.trump_suit, self.dominant_rank)
         else:
@@ -228,7 +228,7 @@ class GameState:
         moves: list[Play] = self.generate_trick_moves()
         if play not in moves: raise ValueError("Invalid move")
         self.get_active_player().remove_card(play.card)
-        if play.quantity == 2:
+        if play.quantity == 2 and play.card_2 is not None:
             self.get_active_player().remove_card(play.card_2)
         self.curr_trick.append(play)
         self.active_player = (self.active_player + 1) % self.num_players

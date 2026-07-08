@@ -19,7 +19,9 @@ class Player:
 
     def sort_hand(self, trump_suit: FaceSuit, dominant_rank: int):
         self.cards.sort(key=lambda card: card.rank if card.rank != dominant_rank else 15)
-        self.cards.sort(key=lambda card: card.get_effective_suit(trump_suit, dominant_rank).value)
+        self.cards.sort(key=lambda card: card.get_effective_suit(trump_suit, dominant_rank).value
+                                         + (2 if card.rank > 15 else 1
+        if card.rank == dominant_rank and card.suit == trump_suit else 0))
 
     def show_hand(self) -> str:
         return ', '.join(map(str, self.cards))
