@@ -1,37 +1,40 @@
-from enum import Enum, auto
+from enum import Enum
 
 from game.effective_suit import EffectiveSuit
 
 
 class FaceSuit(Enum):
-    SPADE = auto()
-    HEART = auto()
-    DIAMOND = auto()
-    CLUB = auto()
-    JOKER = auto()
+    DIAMONDS = 1
+    CLUBS = 2
+    HEARTS = 3
+    SPADES = 4
+    JOKER = 5
 
     def as_effective(self) -> EffectiveSuit:
         match self:
-            case FaceSuit.SPADE:
-                return EffectiveSuit.SPADE
-            case FaceSuit.CLUB:
-                return EffectiveSuit.CLUB
-            case FaceSuit.HEART:
-                return EffectiveSuit.HEART
-            case FaceSuit.DIAMOND:
-                return EffectiveSuit.DIAMOND
+            case FaceSuit.SPADES:
+                return EffectiveSuit.SPADES
+            case FaceSuit.CLUBS:
+                return EffectiveSuit.CLUBS
+            case FaceSuit.HEARTS:
+                return EffectiveSuit.HEARTS
+            case FaceSuit.DIAMONDS:
+                return EffectiveSuit.DIAMONDS
             case FaceSuit.JOKER:
                 return EffectiveSuit.TRUMP
 
+    def trump_str(self) -> str:
+        return "None" if self == FaceSuit.JOKER else self.__str__()
+
     def __str__(self) -> str:
         match self:
-            case FaceSuit.SPADE:
+            case FaceSuit.SPADES:
                 return "Spades"
-            case FaceSuit.HEART:
+            case FaceSuit.HEARTS:
                 return "Hearts"
-            case FaceSuit.DIAMOND:
+            case FaceSuit.DIAMONDS:
                 return "Diamonds"
-            case FaceSuit.CLUB:
+            case FaceSuit.CLUBS:
                 return "Clubs"
             case FaceSuit.JOKER:
                 return "Joker"
