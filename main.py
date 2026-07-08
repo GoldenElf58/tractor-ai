@@ -158,16 +158,28 @@ def display_current_trick(screen: Surface, game_state: GameState) -> None:
                     (x, y) if bid.quantity == 1 else (x - PADDING // 2, y))
         if bid.quantity == 2:
             screen.blit(images[bid.card], (x + PADDING // 2, y))
+        if game_state.active_player != bid.owner:
+            player_text = f"Player {bid.owner + 1}"
+            player_surface = FONT.render(player_text, True, (255, 255, 255))
+            player_rect = player_surface.get_rect()
+            player_rect.midtop = (x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2)
+            pygame.draw.rect(screen, (0, 0, 0), player_rect)
+            screen.blit(player_surface, player_rect)
         return
     if game_state.phase != Phase.TRICK_TAKING: return
     current_trick: list[Play] = game_state.curr_trick
     for i, play in enumerate(reversed(current_trick)):
-        assert isinstance(play.card, Card)
         x, y = CARD_POSITIONS[i]
-        screen.blit(images[play.card],
+        screen.blit(images[play.cards[0]],
                     (x, y) if play.quantity == 1 else (x - PADDING // 2, y))
-        if play.quantity == 2 and play.card_2 is not None:
-            screen.blit(images[play.card_2], (x + PADDING // 2, y))
+        if play.quantity == 2 and play.cards[1] is not None:
+            screen.blit(images[play.cards[1]], (x + PADDING // 2, y))
+        player_text = f"Player {play.owner + 1}"
+        player_surface = FONT.render(player_text, True, (255, 255, 255))
+        player_rect = player_surface.get_rect()
+        player_rect.midtop = (x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2)
+        pygame.draw.rect(screen, (0, 0, 0), player_rect)
+        screen.blit(player_surface, player_rect)
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:

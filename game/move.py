@@ -29,10 +29,10 @@ class Move:
                     all(card == self.move.card for card in cards))
         if isinstance(self.move, Play):
             if len(cards) == 1:
-                return cards[0] == self.move.card and self.move.quantity == 1
-            return (((cards[0] == self.move.card and cards[1] == self.move.card_2) or
-                     (cards[0] == self.move.card_2 and cards[1] == self.move.card)) and
-                    self.move.quantity == len(cards))
+                return cards[0] == self.move.cards[0] and self.move.quantity == 1
+            return (self.move.quantity == len(cards) >= 2 and
+                    ((cards[0] == self.move.cards[0] and cards[1] == self.move.cards[1]) or
+                     (cards[0] == self.move.cards[1] and cards[1] == self.move.cards[0])))
         return False
 
     def __contains__(self, item):
@@ -41,8 +41,8 @@ class Move:
         if isinstance(self.move, Bid):
             return self.move.card is not None and self.move.card == item
         if isinstance(self.move, Play):
-            return (self.move.card.exact_card(item) or
-                    (self.move.card_2 and self.move.card_2.exact_card(item)))
+            return (self.move.cards[0].exact_card(item) or
+                    (self.move.quantity >= 2 and self.move.cards[1].exact_card(item)))
         return False
 
     def __str__(self) -> str:
