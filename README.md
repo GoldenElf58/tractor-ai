@@ -9,16 +9,23 @@ rules.
 
 ## About This Project
 
-This project is a Python implementation of the game Tractor. The project is still under development.
-As of now, the core game implementation is complete, but edge cases are still being tested.
-In the future, I will use this project to train a machine learning model to play tractor.
+This project is a Python implementation of the game Tractor. Currently, the primary game flow is
+implemented, but only single and pair trick types are supported; tractors and multi-combination
+throws (甩牌) are planned for a future update. The long-term goal is to train a machine learning
+model to play Tractor.
 
 ## Features
 
-- Full implementation of Tractor (note that the game is complete, but not fully tested)
-- Supports 4 players
-- Command-line interface
-- Legal move generation
+* Interactive GUI
+* Core game flow (drawing, bidding, kitty, trick-taking, scoring)
+* Single and pair trick types
+* Legal move generation
+* Automatic pass mode (during drawing/bidding phase)
+* Cross-platform builds (Windows, macOS, Linux)
+* Tractors and multi-combination throws (甩牌) not yet implemented
+* End-of-game scoring screen not yet implemented
+
+![gameplay-recording.gif](gameplay-recording.gif)
 
 ## Installation
 
@@ -32,7 +39,7 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases). D
 ### macOS
 
 Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) and download
-`tractor-ai-macos.zip`. Intel macs are currently not supported. Extract the zip file and run
+`tractor-ai-macos.zip`. Intel Macs are currently not supported. Extract the zip file and run
 `tractor-ai-macos`. If you get a message that says "Apple could not verify “tractor-ai-macos” is
 free of malware that may harm your Mac or compromise your privacy," click "Done". Go to System
 Settings/Privacy & Security and scroll down to the Security section. Click "Open Anyway" next to
@@ -46,39 +53,23 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) an
 
 ## How To Play
 
-Once you start the game, each player will be prompted to make a move. For example:
+This is currently a pass-and-play style game, so after taking a turn, you can pass the computer to
+the next player for them to take their turn. Note that after a player finishes their turn, the next
+player's hand is shown immediately. If you're playing with others, be sure to hand the computer to
+the next player before looking at the screen
 
-```
-Player 1 move
-Hand: Jack of Spades, 3 of Hearts, 5 of Hearts, Queen of Hearts, 7 of Diamonds, 8 of Diamonds, Queen of Diamonds, Ace of Diamonds, Queen of Clubs, Little Joker, Little Joker
-Available Moves:
-1 : Pass
-2 : Pair of Little Joker
+### Drawing/Bidding Phase
 
-Enter move index or command:
-```
+On your turn, you can always select the "Pass" button to pass the bid. If you want to bid, select
+the card in your hand you want to bid and press the "Bid" button. Since this phase has a lot of
+passing turns, you can also press the "Auto" button to automatically pass the bid if that is your
+only play.
 
-Then, simply enter the index of the move you want to make. If you want more information about the
-game you can type "i" or "info" to view that information. For example:
+### Burying/Kitty Phase
 
-```
-Enter move index or command: info
-Game Phase: Drawing Phase
-Dominant Rank: 2
-Bid: 2 of Hearts
-Bid Owner: 3
+Select the eight cards from your hand you would like to bury and press the "Discard" button to
+confirm.
 
-Enter move index or command:
-```
+### Trick-Taking Phase
 
-If you want information about other commands available, you can type "h" or "help".
-
-```
-Enter move index or command: help
-Commands:
-'h' or 'help' - Views this help message.
-'q' or 'quit' - Quits the game.
-'i' or 'info' - Views the current game state.
-'' - Makes the first move (typing nothing).
-'a' or 'auto' - Toggles automatic move mode. This will automatically make a move for you if there is only one possible move.
-```
+Select the card or pair of cards you want to play and press the "Play" button.
