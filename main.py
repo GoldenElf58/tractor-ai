@@ -149,6 +149,16 @@ def display_auto_move_button(screen: Surface, automatic_pass: bool) -> bool:
     return auto_move_button.display(screen)
 
 
+def display_player_name(screen: Surface, player_id: int, position: tuple[int, int],
+                        attr: str = "center") -> None:
+    player_text = f"Player {player_id + 1}"
+    player_surface = FONT.render(player_text, True, (255, 255, 255))
+    player_rect = player_surface.get_rect()
+    player_rect.__setattr__(attr, position)
+    pygame.draw.rect(screen, (0, 0, 0), player_rect)
+    screen.blit(player_surface, player_rect)
+
+
 def display_current_trick(screen: Surface, game_state: GameState) -> None:
     if game_state.phase == Phase.DRAWING and (bid := game_state.bid).card is not None and \
             not bid.empty_bid:
@@ -159,30 +169,34 @@ def display_current_trick(screen: Surface, game_state: GameState) -> None:
         if bid.quantity == 2:
             screen.blit(images[bid.card], (x + PADDING // 2, y))
         if game_state.active_player != bid.owner:
-            player_text = f"Player {bid.owner + 1}"
-            player_surface = FONT.render(player_text, True, (255, 255, 255))
-            player_rect = player_surface.get_rect()
-            player_rect.midtop = (x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2)
-            pygame.draw.rect(screen, (0, 0, 0), player_rect)
-            screen.blit(player_surface, player_rect)
+            display_player_name(screen, bid.owner,
+                                position=(x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2),
+                                attr="midtop")
         return
     if game_state.phase != Phase.TRICK_TAKING: return
     current_trick: list[Play] = game_state.curr_trick
     for i, play in enumerate(reversed(current_trick)):
         x, y = CARD_POSITIONS[i]
-        screen.blit(images[play.cards[0]],
-                    (x, y) if play.quantity == 1 else (x - PADDING // 2, y))
-        if play.quantity == 2 and play.cards[1] is not None:
-            screen.blit(images[play.cards[1]], (x + PADDING // 2, y))
-        player_text = f"Player {play.owner + 1}"
-        player_surface = FONT.render(player_text, True, (255, 255, 255))
-        player_rect = player_surface.get_rect()
-        player_rect.midtop = (x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2)
-        pygame.draw.rect(screen, (0, 0, 0), player_rect)
-        screen.blit(player_surface, player_rect)
+        card_x = x if play.quantity == 1 else x - PADDING // 2 if i == 0 else \
+            x - (play.quantity - 1) * PADDING // 2 if i % 2 == 1 else \
+                x + PADDING // 2 - (play.quantity - 1) * PADDING
+        screen.blit(images[play.cards[0]], (card_x, y))
+        if play.quantity > 1:
+            for j, card in enumerate(play.cards):
+                if j == 0: continue
+                screen.blit(images[card], (card_x + PADDING * j, y))
+        name_x = x + CARD_WIDTH // 2
+        if i == 0:
+            name_x += PADDING // 2 * max(0, play.quantity - 2)
+        if i == 2:
+            name_x -= PADDING // 2 * max(0, play.quantity - 2)
+        display_player_name(screen, play.owner,
+                            (name_x, y + CARD_HEIGHT + PADDING // 2), "midtop")
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:
+    if len(moves) == 0:
+        return None
     if moves[0].type == Phase.BURYING:
         if len(selected_cards) == 8:
             return Move(list(selected_cards))
@@ -232,6 +246,10 @@ def gui_game_loop() -> None:
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
                     automatic_pass = not automatic_pass and game_state.phase == Phase.DRAWING
+                # elif event.key == pygame.K_m:
+                #     game_state.generate_moves()
+                # elif event.key == pygame.K_RETURN:
+                #     print(''.join(f"{i + 1} : {repr(move)}\n" for i, move in enumerate(moves)))
         screen.fill((0, 0, 0))
         display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
                      pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
@@ -259,7 +277,7 @@ def gui_game_loop() -> None:
         pygame.display.flip()
 
 
-def game_loop() -> None:
+def terminal_game_loop() -> None:
     game_state = GameState()
     auto: bool = False
     while game_state.is_in_progress():
@@ -302,13 +320,8 @@ def game_loop() -> None:
 
 
 def main() -> None:
-    print("Welcome to Tractor!")
-    print(HELP_TEXT)
-    while True:
-        start: str = input("Would you like to start a game? [Y/n] ").lower()
-        if start == "n": break
-        game_loop()
+    gui_game_loop()
 
 
 if __name__ == '__main__':
-    gui_game_loop()
+    main()

@@ -35,6 +35,14 @@ def get_card_points(card: Card) -> int:
     return 0
 
 
+def get_card(item: Card | Play | Bid | Move) -> Card | None:
+    if isinstance(item, Card): return item
+    if isinstance(item, Play): return item.cards[0]
+    if isinstance(item, Bid): return item.card
+    if isinstance(item, Move): return item.get_card()
+    raise ValueError("Invalid item")
+
+
 class GameState:
     def __init__(self):
         self.num_players: int = 4
@@ -108,20 +116,21 @@ class GameState:
             if not isinstance(move.move, Play): raise ValueError("Not a trick-taking move")
             self.move_trick(move.move)
         else:
-            raise ValueError("Not in valid phase")
+            raise RuntimeError("Not in valid phase")
 
     def generate_bury_moves(self) -> list[Card]:
-        if self.phase != Phase.BURYING: raise ValueError("Not in burying phase")
-        if self.active_player != 0: raise InvalidStateError("Active player should be 0")
+        if self.phase != Phase.BURYING: raise RuntimeError("Not in burying phase")
         return self.get_active_player().cards
 
     def move_bury(self, card: Card) -> None:
+        if self.phase != Phase.BURYING: raise RuntimeError("Not in burying phase")
         if self.active_player != self.round_leader:
             raise InvalidStateError("Active player should be the round leader")
         if card not in self.get_active_player().cards: raise ValueError("Invalid move")
         self.get_active_player().remove_card(card)
         self.trash.append(card)
-        if len(self.get_active_player().cards) == len(self.players[1].cards):
+        if (len(self.get_active_player().cards) ==
+                len(self.players[(self.active_player + 1) % 4].cards)):
             self.phase = Phase.TRICK_TAKING
             self.trick_leader = self.active_player = self.round_leader
 
@@ -139,7 +148,7 @@ class GameState:
                 (self.bid.card.suit != FaceSuit.JOKER or self.bid.card.rank < bid.card.rank))
 
     def generate_bid_moves(self) -> list[Bid]:
-        if self.phase != Phase.DRAWING: raise ValueError("Not in drawing phase")
+        if self.phase != Phase.DRAWING: raise RuntimeError("Not in drawing phase")
         bid_candidates: list[Card] = self.generate_bid_candidates()
         bid_candidates.sort(key=lambda candidate: candidate.rank)
         leader: bool = self.bid.owner == self.active_player
@@ -159,7 +168,7 @@ class GameState:
         return moves
 
     def move_bid(self, move: Bid) -> None:
-        if self.phase != Phase.DRAWING: raise ValueError("Not in drawing phase")
+        if self.phase != Phase.DRAWING: raise RuntimeError("Not in drawing phase")
         if move.owner != self.active_player: raise ValueError("Not your turn")
         moves: list[Bid] = self.generate_bid_moves()
         if move not in moves: raise ValueError("Invalid move")
@@ -168,7 +177,7 @@ class GameState:
             self.phase = Phase.BURYING
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
-            assert self.bid.card is not None
+            assert self.bid.card is not None if not self.bid.empty_bid else True
             self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
             self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             for player in self.players:
@@ -179,63 +188,120 @@ class GameState:
         if not self.higher_bid(move): raise ValueError("Not higher bid")
         self.bid = move
 
-    def generate_trick_moves(self) -> list[Play]:
-        if self.phase != Phase.TRICK_TAKING: raise ValueError("Not in trick-taking phase")
-        all_plays: list[Play] = []
+    def generate_trick_leads(self) -> list[Play]:
+        if self.phase != Phase.TRICK_TAKING: raise RuntimeError("Not in trick-taking phase")
+        plays: list[Play] = []
         for card in self.get_active_player().cards:
             play: Play = Play([card], self.active_player)
-            if play in all_plays:
-                all_plays.append(Play([card.with_other_version(), card], self.active_player))
-            all_plays.append(play)
-        if len(self.curr_trick) == 0:
-            return all_plays
-        candidate_plays = [play for play in all_plays if
-                           play.cards[0].as_effective(self.trump_info) ==
-                           self.curr_trick[0].cards[0].as_effective(self.trump_info) and
-                           play.quantity == self.curr_trick[0].quantity]
-        if len(candidate_plays) == 0:
-            if self.curr_trick[0].quantity == 1: return all_plays
-            plays: list[Play] = []
-            num_matching_led_suit: int = sum(1 for card in self.get_active_player().cards if
-                                             card.as_effective(self.trump_info) ==
-                                             self.curr_trick[0].cards[0]
-                                             .as_effective(self.trump_info))
-            for i, card_1 in enumerate(self.get_active_player().cards):
-                if (num_matching_led_suit >= 1 and
-                        card_1.as_effective(self.trump_info) !=
-                        self.curr_trick[0].cards[0].as_effective(self.trump_info)): continue
-                for j, card_2 in enumerate(self.get_active_player().cards):
-                    if i >= j: continue
-                    if (num_matching_led_suit >= 2 and
-                            card_2.as_effective(self.trump_info) !=
-                            self.curr_trick[0].cards[0].as_effective(self.trump_info)): continue
-                    play: Play = Play([card_1, card_2], self.active_player)
+            if play in plays:
+                plays.append(Play([card.with_other_version(), card], self.active_player))
+            plays.append(play)
+        pair_plays: list[Play] = self.sorted(self.filtered(plays, 2))
+        for i, play_1 in enumerate(pair_plays):
+            for j, play_2 in enumerate(pair_plays):
+                if j <= i: continue
+                cards: list[Card] = []
+                for play in pair_plays[i: j + 1]:
+                    cards.extend(play.cards)
+                play: Play = Play(cards, self.active_player)
+                if play.is_consecutive_double(self.trump_info):
                     plays.append(play)
-            pairs = [play for play in plays if play.is_pair()]
-            if num_matching_led_suit >= 2 and len(pairs) > 0: return pairs
+                else:
+                    break
+        return plays
+
+    def filtered(self, plays: list[Play], quantity: int, suit: EffectiveSuit | None = None,
+                 match_suit: int = -1, max_quantity: int = -1) -> list[Play]:
+        if match_suit == -1:
+            match_suit = quantity
+        if max_quantity == -1:
+            max_quantity = quantity
+        filtered_plays: list[Play] = [
+            play for play in plays
+            if quantity <= play.quantity <= max_quantity and
+               (suit is None or match_suit ==
+                sum(play.cards[i].as_effective(self.trump_info) == suit for i in range(quantity)))
+        ]
+        return filtered_plays
+
+    def sorted(self, cards: list[Card | Play | Bid | Move]) -> list:
+        cards = sorted(cards, key=lambda item: card.rank if (card := get_card(
+            item)) is not None and card.rank != self.dominant_rank else 15)
+        cards = sorted(cards,
+                       key=lambda item: 0 if (card := get_card(item)) is None else
+                       card.as_effective(self.trump_info).value
+                       + (2 if card.rank > 15 else 1 if
+                       card.rank == self.dominant_rank and card.suit == self.trump_suit else 0))
+        return cards
+
+    def get_card_possibilities(self, rem_suited: int, rem_any: int, suit: EffectiveSuit) -> \
+            list[list[Card]]:
+        if rem_suited == 0 and rem_any == 0: return [[]]
+        cards: list[Card] = self.get_active_player().cards if rem_suited == 0 else \
+            [card for card in self.get_active_player().cards
+             if card.as_effective(self.trump_info) == suit]
+        child_possibilities: list[list[Card]] = \
+            self.get_card_possibilities(max(0, rem_suited - 1),
+                                        rem_any - 1 if rem_suited == 0 else rem_any, suit)
+        possibilities: list[list[Card]] = []
+        for card in cards:
+            for possibility in child_possibilities:
+                if card in possibility: continue
+                possibilities.append([*possibility, card])
+        return possibilities
+
+    def generate_trick_moves(self) -> list[Play]:
+        if self.phase != Phase.TRICK_TAKING: raise RuntimeError("Not in trick-taking phase")
+        all_plays: list[Play] = self.generate_trick_leads()
+        if len(self.curr_trick) == 0: return all_plays
+
+        quantity: int = self.curr_trick[0].quantity
+        suit: EffectiveSuit = self.curr_trick[0].cards[0].as_effective(self.trump_info)
+        candidate_plays = self.filtered(all_plays, quantity, suit)
+        if len(candidate_plays) == 0:
+            if quantity == 1: return self.filtered(all_plays, 1)
+            plays: list[Play] = []
+            num_matching_led_suit: int = len(self.filtered(all_plays, 1, suit))
+            consecutive_doubles: list[Play] = self.filtered(all_plays, 2, suit,
+                                                            max_quantity=quantity)
+            max_len: int = 0 if len(consecutive_doubles) == 0 else \
+                max(len(play.cards) for play in consecutive_doubles)
+            consecutive_doubles = [play for play in consecutive_doubles if play.quantity == max_len]
+            if max_len == quantity: return consecutive_doubles
+            rem_quantity: int = quantity - max_len
+            rem_suited: int = min(rem_quantity, num_matching_led_suit - max_len)
+            rem_any: int = rem_quantity - rem_suited
+            rem_card_possibilities: list[list[Card]] = self.get_card_possibilities(rem_suited,
+                                                                                   rem_any, suit)
+            if len(consecutive_doubles) == 0:
+                return [Play(cards, self.active_player) for cards in rem_card_possibilities]
+            for play in consecutive_doubles:
+                for rem_cards in rem_card_possibilities:
+                    consec_double_cards = play.cards.copy()
+                    consec_double_cards.extend(rem_cards)
+                    plays.append(Play(consec_double_cards, self.active_player))
             return plays
         return candidate_plays
 
     def determine_trick_winner(self) -> int:
         lead_suit: EffectiveSuit = \
             self.curr_trick[0].cards[0].get_effective_suit(self.trump_suit, self.dominant_rank)
-        best_card: Card = self.curr_trick[0].cards[0]
+        quantity: int = self.curr_trick[0].quantity
         best_card_index: int = 0
+        best_play: Play = self.curr_trick[best_card_index]
         for i, play in enumerate(self.curr_trick):
-            if self.curr_trick[0].quantity == 2 and play.cards[0] != play.cards[1]: continue
-            if not best_card.is_not_less(play.cards[0], self.dominant_rank, self.trump_suit,
-                                         lead_suit):
+            if quantity == 2 and not play.cards[0].exact_card(play.cards[1]): continue
+            if not best_play.is_not_less(play, self.trump_info, lead_suit):
                 best_card_index = i
-                best_card = play.cards[0]
+                best_play = play
         return (best_card_index + self.trick_leader) % self.num_players
 
     def move_trick(self, play: Play):
-        if self.phase != Phase.TRICK_TAKING: raise ValueError("Not in trick taking phase")
+        if self.phase != Phase.TRICK_TAKING: raise RuntimeError("Not in trick taking phase")
         moves: list[Play] = self.generate_trick_moves()
         if play not in moves: raise ValueError("Invalid move")
-        self.get_active_player().remove_card(play.cards[0])
-        if play.quantity == 2 and play.cards[1] is not None:
-            self.get_active_player().remove_card(play.cards[1])
+        for card in play.cards:
+            self.get_active_player().remove_card(card)
         self.curr_trick.append(play)
         self.active_player = (self.active_player + 1) % self.num_players
         if len(self.curr_trick) == self.num_players:
