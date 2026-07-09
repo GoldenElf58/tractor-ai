@@ -16,6 +16,25 @@ class Move:
         self.type = Phase.DRAWING if isinstance(move, Bid) else Phase.TRICK_TAKING \
             if isinstance(move, Play) else Phase.BURYING
 
+    def get_card(self) -> Card | None:
+        if isinstance(self.move, Card): return self.move
+        if isinstance(self.move, Play): return self.move.cards[0]
+        if isinstance(self.move, Bid): return self.move.card
+        if isinstance(self.move, list): return self.move[0]
+        return None
+
+    def semi_sorted(self, cards: list[Card] | None = None) -> list[Card] | None:
+        if cards is None:
+            if isinstance(self.move, Play):
+                cards = self.move.cards
+            else:
+                cards = self.move
+        if not isinstance(cards, list): return None
+        cards = sorted(cards, key=lambda card: card.version)
+        cards = sorted(cards, key=lambda card: card.rank)
+        cards = sorted(cards, key=lambda card: card.suit.value)
+        return cards
+
     def cards_match(self, cards: list[Card]):
         if len(cards) == 0:
             return isinstance(self.move, Bid) and self.move.empty_bid is None
@@ -29,10 +48,13 @@ class Move:
                     all(card == self.move.card for card in cards))
         if isinstance(self.move, Play):
             if len(cards) == 1:
-                return cards[0] == self.move.card and self.move.quantity == 1
-            return (((cards[0] == self.move.card and cards[1] == self.move.card_2) or
-                     (cards[0] == self.move.card_2 and cards[1] == self.move.card)) and
-                    self.move.quantity == len(cards))
+                return cards[0] == self.move.cards[0] and self.move.quantity == 1
+            if not (self.move.quantity == len(cards) >= 2): return False
+            self_semi_sorted = self.semi_sorted()
+            cards_semi_sorted = self.semi_sorted(cards)
+            if self_semi_sorted is None or cards_semi_sorted is None: return False
+            return all(self_card == other_card for self_card, other_card in
+                       zip(self_semi_sorted, cards_semi_sorted))
         return False
 
     def __contains__(self, item):
@@ -41,8 +63,7 @@ class Move:
         if isinstance(self.move, Bid):
             return self.move.card is not None and self.move.card == item
         if isinstance(self.move, Play):
-            return (self.move.card.exact_card(item) or
-                    (self.move.card_2 and self.move.card_2.exact_card(item)))
+            return any(move.exact_card(item) for move in self.move.cards)
         return False
 
     def __str__(self) -> str:

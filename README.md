@@ -10,19 +10,18 @@ rules.
 ## About This Project
 
 This project is a Python implementation of the game Tractor. Currently, the primary game flow is
-implemented, but only single and pair trick types are supported; tractors and multi-combination
-throws (甩牌) are planned for a future update. The long-term goal is to train a machine learning
+implemented, including single, pair, tractor, and consecutive pair trick types. Multi-combination
+throws (甩牌) are not currently supported. The long-term goal is to train a machine learning
 model to play Tractor.
 
 ## Features
 
 * Interactive GUI
 * Core game flow (drawing, bidding, kitty, trick-taking, scoring)
-* Single and pair trick types
+* Single, pair, tractor, and consecutive pair trick types
 * Legal move generation
 * Automatic pass mode (during drawing/bidding phase)
 * Cross-platform builds (Windows, macOS, Linux)
-* Tractors and multi-combination throws (甩牌) not yet implemented
 * End-of-game scoring screen not yet implemented
 
 ![gameplay-recording.gif](gameplay-recording.gif)
