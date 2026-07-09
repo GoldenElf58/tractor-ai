@@ -246,7 +246,8 @@ class GameState:
         possibilities: list[list[Card]] = []
         for card in cards:
             for possibility in child_possibilities:
-                if card in possibility: continue
+                if any(card.exact_card(prev_card) for prev_card in possibility):
+                    continue
                 possibilities.append([*possibility, card])
         return possibilities
 
