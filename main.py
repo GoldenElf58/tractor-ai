@@ -159,19 +159,29 @@ def display_player_name(screen: Surface, player_id: int, position: tuple[int, in
     screen.blit(player_surface, player_rect)
 
 
+def display_player_names(screen: Surface, active_player_id: int, player_ids: list[int]):
+    for player_id in player_ids:
+        x, y = CARD_POSITIONS[(active_player_id - player_id - 1) % 4]
+        display_player_name(screen, player_id, (x + CARD_WIDTH // 2, y + CARD_HEIGHT // 2),
+                            attr="midtop")
+
+
 def display_current_trick(screen: Surface, game_state: GameState) -> None:
-    if game_state.phase == Phase.DRAWING and (bid := game_state.bid).card is not None and \
-            not bid.empty_bid:
-        position: int = (game_state.active_player - bid.owner) % 4 - 1
-        x, y = CARD_POSITIONS[position]
-        screen.blit(images[bid.card],
-                    (x, y) if bid.quantity == 1 else (x - PADDING // 2, y))
-        if bid.quantity == 2:
-            screen.blit(images[bid.card], (x + PADDING // 2, y))
-        if game_state.active_player != bid.owner:
-            display_player_name(screen, bid.owner,
-                                position=(x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2),
-                                attr="midtop")
+    players_remaining: list[int] = [i for i in range(4) if i != game_state.active_player]
+    if game_state.phase == Phase.DRAWING:
+        if (bid := game_state.bid).card is not None and not bid.empty_bid:
+            position: int = (game_state.active_player - bid.owner) % 4 - 1
+            x, y = CARD_POSITIONS[position]
+            screen.blit(images[bid.card],
+                        (x, y) if bid.quantity == 1 else (x - PADDING // 2, y))
+            if bid.quantity == 2:
+                screen.blit(images[bid.card], (x + PADDING // 2, y))
+            if game_state.active_player != bid.owner:
+                players_remaining.remove(bid.owner)
+                display_player_name(screen, bid.owner,
+                                    position=(x + CARD_WIDTH // 2, y + CARD_HEIGHT + PADDING // 2),
+                                    attr="midtop")
+        display_player_names(screen, game_state.active_player, players_remaining)
         return
     if game_state.phase != Phase.TRICK_TAKING: return
     current_trick: list[Play] = game_state.curr_trick
@@ -190,8 +200,10 @@ def display_current_trick(screen: Surface, game_state: GameState) -> None:
             name_x += PADDING // 2 * max(0, play.quantity - 2)
         if i == 2:
             name_x -= PADDING // 2 * max(0, play.quantity - 2)
+        players_remaining.remove(play.owner)
         display_player_name(screen, play.owner,
                             (name_x, y + CARD_HEIGHT + PADDING // 2), "midtop")
+    display_player_names(screen, game_state.active_player, players_remaining)
 
 
 def get_selected_move(moves: list[Move]) -> Move | None:
@@ -217,8 +229,12 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
                      if game_state.phase == Phase.TRICK_TAKING else "") +
                  f"Dominant Rank: {game_state.dominant_rank}\n" + (
                      f"Trump Suit: {game_state.trump_suit.trump_str()}\n"
-                     if game_state.phase != Phase.DRAWING else ""
-                 ))
+                     if game_state.phase != Phase.DRAWING else "") +
+                 (f"Offense Points: {game_state.offense_points}\n"
+                  f"Defense Points: {game_state.defense_points}\n"
+                  if game_state.phase == Phase.TRICK_TAKING or
+                     game_state.phase == Phase.GAME_END else "")
+                 )
     text_surface: Surface = font.render(text, True, (255, 255, 255))
     info_rect: Rect = text_surface.get_rect(topleft=(25, 25))
     pygame.draw.rect(screen, (0, 0, 0), info_rect)
@@ -235,6 +251,9 @@ def gui_game_loop() -> None:
     clock: Clock = pygame.time.Clock()
     game_state: GameState = GameState()
     moves: list[Move] = game_state.generate_moves()
+    # while game_state.phase != Phase.BURYING:
+    #     game_state.move(moves[0])
+    #     moves = game_state.generate_moves()
     automatic_pass: bool = False
     last_move_time: float = pygame.time.get_ticks()
     while True:
@@ -268,6 +287,7 @@ def gui_game_loop() -> None:
             if selected_move is not None:
                 last_move_time = pygame.time.get_ticks()
                 game_state.move(selected_move)
+                game_state.score_points(-1)
                 moves = game_state.generate_moves()
                 selected_cards.clear()
                 y = HAND_Y - CARD_HEIGHT // 2
