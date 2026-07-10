@@ -234,21 +234,33 @@ class GameState:
                        card.rank == self.dominant_rank and card.suit == self.trump_suit else 0))
         return cards
 
-    def get_card_possibilities(self, rem_suited: int, rem_any: int, suit: EffectiveSuit) -> \
-            list[list[Card]]:
-        if rem_suited == 0 and rem_any == 0: return [[]]
-        cards: list[Card] = self.get_active_player().cards if rem_suited == 0 else \
-            [card for card in self.get_active_player().cards
-             if card.as_effective(self.trump_info) == suit]
+    def get_card_possibilities(self, rem_pairs: int, rem_suited: int, rem_any: int,
+                               suit: EffectiveSuit) -> list[list[Card]]:
+        if rem_pairs == 0 and rem_suited == 0 and rem_any == 0: return [[]]
+        if rem_pairs:
+            plays: list[Play] = self.filtered(self.generate_trick_leads(), 2, suit)
+            card_plays: list[list[Card]] = [play.cards for play in plays]
+        else:
+            card_plays: list[list[Card]] = [
+                [card] for card in self.get_active_player().cards
+                if rem_suited == 0 or card.as_effective(self.trump_info) == suit]
+            # card_plays: list[list[Card]] = [
+            # [card] for card in self.get_active_player().card_plays] \
+            #     if rem_suited == 0 else \
+            #     [[card] for card in self.get_active_player().card_plays
+            #      if card.as_effective(self.trump_info) == suit]
         child_possibilities: list[list[Card]] = \
-            self.get_card_possibilities(max(0, rem_suited - 1),
-                                        rem_any - 1 if rem_suited == 0 else rem_any, suit)
+            self.get_card_possibilities(max(0, rem_pairs - 1),
+                                        max(0, rem_suited - 1) if rem_pairs == 0 else rem_suited,
+                                        rem_any - 1 if rem_pairs == 0 and rem_suited == 0 else
+                                        rem_any, suit)
         possibilities: list[list[Card]] = []
-        for card in cards:
+        for cards in card_plays:
             for possibility in child_possibilities:
-                if any(card.exact_card(prev_card) for prev_card in possibility):
+                if any(any(card.exact_card(prev_card) for card in cards) for prev_card in
+                       possibility):
                     continue
-                possibilities.append([*possibility, card])
+                possibilities.append([*possibility, *cards])
         return possibilities
 
     def generate_trick_moves(self) -> list[Play]:
@@ -270,9 +282,13 @@ class GameState:
             consecutive_doubles = [play for play in consecutive_doubles if play.quantity == max_len]
             if max_len == quantity: return consecutive_doubles
             rem_quantity: int = quantity - max_len
-            rem_suited: int = min(rem_quantity, num_matching_led_suit - max_len)
-            rem_any: int = rem_quantity - rem_suited
-            rem_card_possibilities: list[list[Card]] = self.get_card_possibilities(rem_suited,
+            rem_pairs: int = min(rem_quantity,
+                                 len(self.filtered(all_plays, 2, suit)) - max_len // 2)
+            rem_suited: int = min(rem_quantity - rem_pairs * 2,
+                                  num_matching_led_suit - max_len - rem_pairs)
+            rem_any: int = rem_quantity - rem_pairs * 2 - rem_suited
+            rem_card_possibilities: list[list[Card]] = self.get_card_possibilities(rem_pairs,
+                                                                                   rem_suited,
                                                                                    rem_any, suit)
             if len(consecutive_doubles) == 0:
                 return [Play(cards, self.active_player) for cards in rem_card_possibilities]
