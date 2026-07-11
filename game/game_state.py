@@ -26,7 +26,7 @@ def generate_deck() -> list[Card]:
 
 
 def get_trick_points(trick: tuple[Play, ...]) -> int:
-    return sum(get_card_points(play.cards[0]) for play in trick)
+    return sum(sum(get_card_points(card) for card in play.cards) for play in trick)
 
 
 def get_card_points(card: Card) -> int:
@@ -59,10 +59,11 @@ class GameState:
         self.trump_suit: FaceSuit = FaceSuit.JOKER
         self.phase: Phase = Phase.DRAWING
         self.offense_points: int = 0
+        self.defense_points: int = 0
         self.trump_info: TrumpInfo | None = None
-        self.setup_game()
+        self.setup_round()
 
-    def setup_game(self) -> None:
+    def setup_round(self) -> None:
         self.deck = generate_deck()
         self.trash.clear()
         for player in self.players:
@@ -77,6 +78,7 @@ class GameState:
         self.trump_suit: FaceSuit = FaceSuit.JOKER
         self.phase: Phase = Phase.DRAWING
         self.offense_points: int = 0
+        self.defense_points: int = 0
 
     def is_in_progress(self) -> bool:
         return self.phase != Phase.GAME_END
@@ -330,7 +332,7 @@ class GameState:
 
     def transition_rounds(self, trick_winner: int):
         self.phase = Phase.DRAWING
-        self.score_points(trick_winner)
+        self.score_points(trick_winner, True)
         if self.offense_points < 80:
             self.round_leader = (self.round_leader + 2) % 4
             if self.team_levels[self.round_leader % 2] == 14:
@@ -353,14 +355,19 @@ class GameState:
                 self.team_levels[self.round_leader % 2] += 2
         self.team_levels[self.round_leader % 2] = max(self.team_levels[self.round_leader % 2], 14)
         self.dominant_rank = self.team_levels[self.round_leader % 2]
-        self.setup_game()
+        self.setup_round()
 
-    def score_points(self, trick_winner: int):
+    def score_points(self, trick_winner: int, end_of_round: bool = False):
         player_a: int = (self.round_leader + 1) % 4
         player_b: int = (self.round_leader + 3) % 4
+        player_c: int = (self.round_leader + 0) % 4
+        player_d: int = (self.round_leader + 2) % 4
         self.offense_points = sum(
             get_trick_points(trick) for trick in (*self.players[player_a].tricks,
                                                   *self.players[player_b].tricks))
-        if trick_winner == player_a or trick_winner == player_b:
+        self.defense_points = sum(
+            get_trick_points(trick) for trick in (*self.players[player_c].tricks,
+                                                  *self.players[player_d].tricks))
+        if end_of_round and trick_winner == player_a or trick_winner == player_b:
             self.offense_points += sum(get_card_points(card) for card in self.trash) * \
                                    self.curr_trick[0].quantity * 2
