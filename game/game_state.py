@@ -305,11 +305,9 @@ class GameState:
     def determine_trick_winner(self) -> int:
         lead_suit: EffectiveSuit = \
             self.curr_trick[0].cards[0].get_effective_suit(self.trump_suit, self.dominant_rank)
-        quantity: int = self.curr_trick[0].quantity
         best_card_index: int = 0
         best_play: Play = self.curr_trick[best_card_index]
         for i, play in enumerate(self.curr_trick):
-            if quantity == 2 and not play.cards[0].exact_card(play.cards[1]): continue
             if not best_play.is_not_less(play, self.trump_info, lead_suit):
                 best_card_index = i
                 best_play = play
