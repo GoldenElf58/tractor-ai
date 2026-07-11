@@ -27,6 +27,9 @@ class Button:
         mouse_y: int = pygame.mouse.get_pos()[1]
         return self.rect.collidepoint(mouse_x, mouse_y)
 
+    def set_centery(self, y: int) -> None:
+        self.rect.centery = y
+
     def display(self, screen: Surface) -> bool:
         mouse_down: bool = pygame.mouse.get_pressed()[0]
         hovering: bool = self.mouse_is_hovering()

@@ -8,6 +8,7 @@ from button import Button
 from game import Card, GameState, Phase, FaceSuit, Bid, Play
 from game.game_state import generate_deck
 from game.move import Move
+from menu import Menu
 from utils import ease_out_cubic
 
 pygame.init()
@@ -26,9 +27,13 @@ CARD_SCALE_FACTOR: float = 0.17
 PADDING: int = 25
 PEAK_HEIGHT: int = 15
 HEIGHT_INCREASE: int = 30
+BACKGROUND_COLOR: Color | tuple[int, int, int] = (12, 12, 12)
+TITLE_FONT: Font = pygame.font.SysFont("arial", 60)
 
 WIDTH = 1080
 HEIGHT = 720
+MIN_WIDTH = 920
+MIN_HEIGHT = 660
 
 images: dict[Card, Surface] = {
     card: smoothscale_by(pygame.image.load(f"assets/cards/{card.get_filename()}"),
@@ -52,6 +57,11 @@ AUTO_MOVE_BUTTON_BORDER_RADIUS: int = 10
 AUTO_MOVE_BUTTON_POS: tuple[int, int] = (AUTO_MOVE_BUTTON_WIDTH // 2 + PADDING * 2,
                                          HEIGHT - AUTO_MOVE_BUTTON_HEIGHT // 2 - PADDING)
 
+PLAY_BUTTON_WIDTH: int = 100
+PLAY_BUTTON_HEIGHT: int = 50
+PLAY_BUTTON_BORDER_RADIUS: int = 10
+PLAY_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
+
 FONT: Font = pygame.font.SysFont("arial", 20)
 AUTO_PASS_TIME: int = 100  # ms
 AUTO_PLAY_TIME: int = 1000  # ms
@@ -60,7 +70,7 @@ CARD_POSITIONS: list[tuple[int, int]] = [
     (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
     (WIDTH // 2 - CARD_WIDTH // 2, PADDING * 2),
     (WIDTH - PADDING * 2 - CARD_WIDTH, HEIGHT // 2 - CARD_HEIGHT // 2),
-    (WIDTH // 2 - CARD_WIDTH // 2, HEIGHT // 2)
+    (WIDTH // 2 - CARD_WIDTH // 2, HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2)
 ]
 
 hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, ease_out_cubic)
@@ -68,6 +78,11 @@ hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, 
 card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
 selected_cards: set[Card] = set()
 mouse_start_pressing_move_button: bool = False
+play_rect: Rect = Rect(PLAY_BUTTON_POS[0] - PLAY_BUTTON_WIDTH // 2,
+                       PLAY_BUTTON_POS[1] - PLAY_BUTTON_HEIGHT // 2,
+                       PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
+play_button: Button = Button(play_rect, "Play", FONT, Color(255, 255, 255), Color(80, 80, 80),
+                             Color(100, 100, 100), Color(120, 120, 120), PLAY_BUTTON_BORDER_RADIUS)
 move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
                        MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
                        MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
@@ -80,6 +95,48 @@ auto_move_button: Button = Button(auto_move_rect, "", FONT,
                                   Color(255, 255, 255), Color(80, 80, 80),
                                   Color(100, 100, 100), Color(120, 120, 120),
                                   MOVE_BUTTON_BORDER_RADIUS)
+
+
+def update_positions(screen: Surface) -> None:
+    global WIDTH
+    global HEIGHT
+    global CARD_POSITIONS
+    global PLAY_BUTTON_POS
+    global MOVE_BUTTON_POS
+    global AUTO_MOVE_BUTTON_POS
+    global HAND_X, HAND_Y
+    global move_rect
+    global auto_move_rect
+    global play_rect
+    WIDTH = screen.get_width()
+    HEIGHT = screen.get_height()
+
+    PLAY_BUTTON_POS = (WIDTH // 2, HEIGHT // 2)
+    play_rect = Rect(PLAY_BUTTON_POS[0] - PLAY_BUTTON_WIDTH // 2,
+                     PLAY_BUTTON_POS[1] - PLAY_BUTTON_HEIGHT // 2,
+                     PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
+    play_button.rect = play_rect
+    MOVE_BUTTON_POS = (WIDTH // 2, min(HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 5 // 2 -
+                                       MOVE_BUTTON_HEIGHT, HEIGHT // 2))
+    move_rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
+                     MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
+                     MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
+    move_button.rect = move_rect
+    AUTO_MOVE_BUTTON_POS = (AUTO_MOVE_BUTTON_WIDTH // 2 + PADDING * 2,
+                            HEIGHT - AUTO_MOVE_BUTTON_HEIGHT // 2 - PADDING)
+    auto_move_rect = Rect(AUTO_MOVE_BUTTON_POS[0] - AUTO_MOVE_BUTTON_WIDTH // 2,
+                          AUTO_MOVE_BUTTON_POS[1] - AUTO_MOVE_BUTTON_HEIGHT // 2,
+                          AUTO_MOVE_BUTTON_WIDTH, AUTO_MOVE_BUTTON_HEIGHT)
+    auto_move_button.rect = auto_move_rect
+
+    CARD_POSITIONS = [
+        (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
+        (WIDTH // 2 - CARD_WIDTH // 2, PADDING * 2),
+        (WIDTH - PADDING * 2 - CARD_WIDTH, HEIGHT // 2 - CARD_HEIGHT // 2),
+        (WIDTH // 2 - CARD_WIDTH // 2, HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2)
+    ]
+    HAND_X = WIDTH // 2
+    HAND_Y = HEIGHT - CARD_HEIGHT - PADDING // 2
 
 
 def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
@@ -135,12 +192,16 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
         screen.blit(images[card], (start_x + i * PADDING, hover_anim[card].current))
 
 
-def display_move_button(screen: Surface, move: Move | None) -> bool:
+def display_move_button(screen: Surface, move: Move | None, game_state: GameState) -> bool:
     if move is None: return False
     text: str = "Play" if move.type == Phase.TRICK_TAKING else "Discard" \
         if move.type == Phase.BURYING else "Bid" \
         if isinstance(move.move, Bid) and not move.move.empty_bid else "Pass"
     move_button.set_text(text)
+    move_button.set_centery(HEIGHT // 2 if game_state.phase != Phase.DRAWING or
+                                           game_state.bid.owner != game_state.active_player
+                            else min(HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2 -
+                                     MOVE_BUTTON_HEIGHT, HEIGHT // 2))
     return move_button.display(screen)
 
 
@@ -155,15 +216,14 @@ def display_player_name(screen: Surface, player_id: int, position: tuple[int, in
     player_surface = FONT.render(player_text, True, (255, 255, 255))
     player_rect = player_surface.get_rect()
     player_rect.__setattr__(attr, position)
-    pygame.draw.rect(screen, (0, 0, 0), player_rect)
+    pygame.draw.rect(screen, BACKGROUND_COLOR, player_rect)
     screen.blit(player_surface, player_rect)
 
 
 def display_player_names(screen: Surface, active_player_id: int, player_ids: list[int]):
     for player_id in player_ids:
         x, y = CARD_POSITIONS[(active_player_id - player_id - 1) % 4]
-        display_player_name(screen, player_id, (x + CARD_WIDTH // 2, y + CARD_HEIGHT // 2),
-                            attr="midtop")
+        display_player_name(screen, player_id, (x + CARD_WIDTH // 2, y + CARD_HEIGHT // 2))
 
 
 def display_current_trick(screen: Surface, game_state: GameState) -> None:
@@ -237,18 +297,21 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
                  )
     text_surface: Surface = font.render(text, True, (255, 255, 255))
     info_rect: Rect = text_surface.get_rect(topleft=(25, 25))
-    pygame.draw.rect(screen, (0, 0, 0), info_rect)
+    pygame.draw.rect(screen, BACKGROUND_COLOR, info_rect)
     screen.blit(text_surface, (25, 25))
     text_surface = font.render(f"Player {game_state.active_player + 1}", True, (255, 255, 255))
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - PADDING * 1.5))
-    pygame.draw.rect(screen, (0, 0, 0), text_rect)
+    pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
     screen.blit(text_surface, text_rect)
 
 
-def gui_game_loop() -> None:
+def gui_loop() -> None:
+    global WIDTH
+    global HEIGHT
     pygame.init()
-    screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT))
+    screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     clock: Clock = pygame.time.Clock()
+    menu: Menu = Menu.TITLE
     game_state: GameState = GameState()
     moves: list[Move] = game_state.generate_moves()
     # while game_state.phase != Phase.BURYING:
@@ -258,43 +321,72 @@ def gui_game_loop() -> None:
     last_move_time: float = pygame.time.get_ticks()
     while True:
         delta_time: float = clock.tick(60)
+        update_positions(screen)
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 pygame.quit()
                 return
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE and menu == Menu.GAME:
                     automatic_pass = not automatic_pass and game_state.phase == Phase.DRAWING
                 # elif event.key == pygame.K_m:
                 #     game_state.generate_moves()
                 # elif event.key == pygame.K_RETURN:
                 #     print(''.join(f"{i + 1} : {repr(move)}\n" for i, move in enumerate(moves)))
-        screen.fill((0, 0, 0))
-        display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
-                     pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0], moves)
-        move_requested: bool = display_move_button(screen, get_selected_move(moves))
-        display_info(screen, game_state, FONT)
-        display_current_trick(screen, game_state)
-        if game_state.phase == Phase.DRAWING and display_auto_move_button(screen, automatic_pass):
-            automatic_pass = not automatic_pass
-        elif automatic_pass and game_state.phase != Phase.DRAWING:
-            automatic_pass = False
-        if move_requested or (automatic_pass and len(moves) == 1 and
-                              pygame.time.get_ticks() - last_move_time > (
-                                      AUTO_PASS_TIME if game_state.phase == Phase.DRAWING else
-                                      AUTO_PLAY_TIME)):
-            selected_move = get_selected_move(moves)
-            if selected_move is not None:
-                last_move_time = pygame.time.get_ticks()
-                game_state.move(selected_move)
-                game_state.score_points(-1)
-                moves = game_state.generate_moves()
-                selected_cards.clear()
-                y = HAND_Y - CARD_HEIGHT // 2
-                for card in card_selection:
-                    hover_anim[card].current = y
-                    card_selection[card] = False
-        pygame.display.flip()
+            elif event.type == pygame.VIDEORESIZE:
+                new_w, new_h = event.size
+                WIDTH, HEIGHT = max(MIN_WIDTH, new_w), max(MIN_HEIGHT, new_h)
+                print(WIDTH, HEIGHT)
+                if new_w != WIDTH or new_h != HEIGHT:
+                    screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
+                update_positions(screen)
+
+        screen.fill(BACKGROUND_COLOR)
+        match menu:
+            case Menu.TITLE:
+                text_surface = TITLE_FONT.render("Tractor", True, (255, 255, 255))
+                text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+                screen.blit(text_surface, text_rect)
+                if play_button.display(screen):
+                    menu = Menu.GAME
+                    game_state: GameState = GameState()
+                    moves: list[Move] = game_state.generate_moves()
+                    # while game_state.phase != Phase.BURYING:
+                    #     game_state.move(moves[0])
+                    #     moves = game_state.generate_moves()
+                    automatic_pass: bool = False
+                    last_move_time: float = pygame.time.get_ticks()
+                pygame.display.flip()
+                continue
+            case Menu.GAME:
+                display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
+                             pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0],
+                             moves)
+                move_requested: bool = display_move_button(screen, get_selected_move(moves),
+                                                           game_state)
+                display_info(screen, game_state, FONT)
+                display_current_trick(screen, game_state)
+                if game_state.phase == Phase.DRAWING and display_auto_move_button(screen,
+                                                                                  automatic_pass):
+                    automatic_pass = not automatic_pass
+                elif automatic_pass and game_state.phase != Phase.DRAWING:
+                    automatic_pass = False
+                if move_requested or (automatic_pass and len(moves) == 1 and
+                                      pygame.time.get_ticks() - last_move_time > (
+                                              AUTO_PASS_TIME if game_state.phase == Phase.DRAWING
+                                              else AUTO_PLAY_TIME)):
+                    selected_move = get_selected_move(moves)
+                    if selected_move is not None:
+                        last_move_time = pygame.time.get_ticks()
+                        game_state.move(selected_move)
+                        game_state.score_points(-1)
+                        moves = game_state.generate_moves()
+                        selected_cards.clear()
+                        y = HAND_Y - CARD_HEIGHT // 2
+                        for card in card_selection:
+                            hover_anim[card].current = y
+                            card_selection[card] = False
+                pygame.display.flip()
 
 
 def terminal_game_loop() -> None:
@@ -340,7 +432,7 @@ def terminal_game_loop() -> None:
 
 
 def main() -> None:
-    gui_game_loop()
+    gui_loop()
 
 
 if __name__ == '__main__':
