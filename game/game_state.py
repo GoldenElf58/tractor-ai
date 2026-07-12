@@ -56,6 +56,7 @@ class GameState:
         self.round_leader: int = 0
         self.dominant_rank: int = 2
         self.curr_trick: list[Play] = []
+        self.last_trick: list[Play] = []
         self.trump_suit: FaceSuit = FaceSuit.JOKER
         self.phase: Phase = Phase.DRAWING
         self.offense_points: int = 0
@@ -117,6 +118,8 @@ class GameState:
         elif self.phase == Phase.TRICK_TAKING:
             if not isinstance(move.move, Play): raise ValueError("Not a trick-taking move")
             self.move_trick(move.move)
+        elif self.phase == Phase.TRANSITION_ROUNDS:
+            self.transition_rounds(self.active_player)
         else:
             raise RuntimeError("Not in valid phase")
 
@@ -325,43 +328,54 @@ class GameState:
             self.trick_leader = self.active_player = self.determine_trick_winner()
             self.get_active_player().win_trick(tuple(self.curr_trick))
             if len(self.players[0].cards) == 0:
-                self.transition_rounds(self.active_player)
+                self.phase = Phase.TRANSITION_ROUNDS
+                self.last_trick = self.curr_trick
             self.curr_trick = []
 
-    def transition_rounds(self, trick_winner: int):
-        self.phase = Phase.DRAWING
-        self.score_points(trick_winner, True)
+    def get_next_round_leader(self):
+        return (self.round_leader + 2) % 4 if self.offense_points < 80 else \
+            (self.round_leader + 1) % 4
+
+    def get_next_team_levels(self) -> list[int]:
+        self.score_points(self.active_player)
+        next_levels: list[int] = self.team_levels.copy()
+        next_round_leader: int = self.get_next_round_leader()
         if self.offense_points < 80:
-            self.round_leader = (self.round_leader + 2) % 4
-            if self.team_levels[self.round_leader % 2] == 14:
-                self.phase = Phase.GAME_END
-                self.dominant_rank = 14
-                self.team_levels[self.round_leader % 2] = 15
-                self.setup_round()
-                return
+            if next_levels[next_round_leader % 2] == 14:
+                next_levels[next_round_leader % 2] = 15
+                return next_levels
             if self.offense_points == 0:
-                self.team_levels[self.round_leader % 2] += 3
+                next_levels[next_round_leader % 2] += 3
             elif self.offense_points < 40:
-                self.team_levels[self.round_leader % 2] += 2
+                next_levels[next_round_leader % 2] += 2
             else:
-                self.team_levels[self.round_leader % 2] += 1
+                next_levels[next_round_leader % 2] += 1
             if self.defense_points >= 200:
-                self.team_levels[self.round_leader % 2] += 1
+                next_levels[next_round_leader % 2] += 1
         else:
-            self.round_leader = (self.round_leader + 1) % 4
             if self.offense_points < 120:
                 pass
             elif self.offense_points < 160:
-                self.team_levels[self.round_leader % 2] += 1
+                next_levels[next_round_leader % 2] += 1
             elif self.offense_points < 200:
-                self.team_levels[self.round_leader % 2] += 2
+                next_levels[next_round_leader % 2] += 2
             else:
-                self.team_levels[self.round_leader % 2] += 3
-        self.team_levels[self.round_leader % 2] = min(self.team_levels[self.round_leader % 2], 14)
+                next_levels[next_round_leader % 2] += 3
+        next_levels[next_round_leader % 2] = min(next_levels[next_round_leader % 2], 14)
+        return next_levels
+
+    def transition_rounds(self, trick_winner: int):
+        self.score_points(trick_winner)
+        self.phase = Phase.DRAWING
+        self.team_levels = self.get_next_team_levels()
+        self.round_leader = self.get_next_round_leader()
         self.dominant_rank = self.team_levels[self.round_leader % 2]
+        if self.dominant_rank == 15:
+            self.phase = Phase.GAME_END
+            return
         self.setup_round()
 
-    def score_points(self, trick_winner: int, end_of_round: bool = False):
+    def score_points(self, trick_winner: int):
         player_a: int = (self.round_leader + 1) % 4
         player_b: int = (self.round_leader + 3) % 4
         player_c: int = (self.round_leader + 0) % 4
@@ -372,6 +386,7 @@ class GameState:
         self.defense_points = sum(
             get_trick_points(trick) for trick in (*self.players[player_c].tricks,
                                                   *self.players[player_d].tricks))
-        if end_of_round and (trick_winner == player_a or trick_winner == player_b):
+        if (self.phase == Phase.TRANSITION_ROUNDS and
+                (trick_winner == player_a or trick_winner == player_b)):
             self.offense_points += sum(get_card_points(card) for card in self.trash) * \
-                                   self.curr_trick[0].quantity * 2
+                                   self.last_trick[0].quantity * 2

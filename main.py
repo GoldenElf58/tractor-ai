@@ -28,11 +28,13 @@ PADDING: int = 25
 PEAK_HEIGHT: int = 15
 HEIGHT_INCREASE: int = 30
 BACKGROUND_COLOR: Color | tuple[int, int, int] = (12, 12, 12)
+FONT: Font = pygame.font.SysFont("arial", 20)
+HEADING_FONT: Font = pygame.font.SysFont("arial", 40)
 TITLE_FONT: Font = pygame.font.SysFont("arial", 60)
 
 WIDTH = 1080
 HEIGHT = 720
-MIN_WIDTH = 920
+MIN_WIDTH = 1000
 MIN_HEIGHT = 660
 
 images: dict[Card, Surface] = {
@@ -46,23 +48,15 @@ CARD_HEIGHT: int = images[Card(FaceSuit.JOKER, 17, 1)].get_height()
 HAND_X: int = WIDTH // 2
 HAND_Y: int = HEIGHT - CARD_HEIGHT - PADDING // 2
 
-MOVE_BUTTON_WIDTH: int = 100
-MOVE_BUTTON_HEIGHT: int = 50
-MOVE_BUTTON_BORDER_RADIUS: int = 10
+BUTTON_WIDTH: int = 100
+BUTTON_HEIGHT: int = 50
+
 MOVE_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2 - CARD_HEIGHT // 2)
-
-AUTO_MOVE_BUTTON_WIDTH: int = 100
-AUTO_MOVE_BUTTON_HEIGHT: int = 50
-AUTO_MOVE_BUTTON_BORDER_RADIUS: int = 10
-AUTO_MOVE_BUTTON_POS: tuple[int, int] = (AUTO_MOVE_BUTTON_WIDTH // 2 + PADDING * 2,
-                                         HEIGHT - AUTO_MOVE_BUTTON_HEIGHT // 2 - PADDING)
-
-PLAY_BUTTON_WIDTH: int = 100
-PLAY_BUTTON_HEIGHT: int = 50
-PLAY_BUTTON_BORDER_RADIUS: int = 10
+AUTO_MOVE_BUTTON_POS: tuple[int, int] = (BUTTON_WIDTH // 2 + PADDING,
+                                         HEIGHT - BUTTON_HEIGHT // 2 - PADDING)
 PLAY_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
+CONFIRM_END_ROUND_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT * 3 // 4)
 
-FONT: Font = pygame.font.SysFont("arial", 20)
 AUTO_PASS_TIME: int = 100  # ms
 AUTO_PLAY_TIME: int = 1000  # ms
 
@@ -78,23 +72,11 @@ hover_anim: dict[Card, Animation] = {card: Animation(HAND_Y, HAND_Y, HAND_Y, 0, 
 card_selection: dict[Card, bool] = {card: False for card in generate_deck()}
 selected_cards: set[Card] = set()
 mouse_start_pressing_move_button: bool = False
-play_rect: Rect = Rect(PLAY_BUTTON_POS[0] - PLAY_BUTTON_WIDTH // 2,
-                       PLAY_BUTTON_POS[1] - PLAY_BUTTON_HEIGHT // 2,
-                       PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
-play_button: Button = Button(play_rect, "Play", FONT, Color(255, 255, 255), Color(80, 80, 80),
-                             Color(100, 100, 100), Color(120, 120, 120), PLAY_BUTTON_BORDER_RADIUS)
-move_rect: Rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
-                       MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
-                       MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
-move_button: Button = Button(move_rect, "", FONT, Color(255, 255, 255), Color(80, 80, 80),
-                             Color(100, 100, 100), Color(120, 120, 120), MOVE_BUTTON_BORDER_RADIUS)
-auto_move_rect: Rect = Rect(AUTO_MOVE_BUTTON_POS[0] - AUTO_MOVE_BUTTON_WIDTH // 2,
-                            AUTO_MOVE_BUTTON_POS[1] - AUTO_MOVE_BUTTON_HEIGHT // 2,
-                            AUTO_MOVE_BUTTON_WIDTH, AUTO_MOVE_BUTTON_HEIGHT)
-auto_move_button: Button = Button(auto_move_rect, "", FONT,
-                                  Color(255, 255, 255), Color(80, 80, 80),
-                                  Color(100, 100, 100), Color(120, 120, 120),
-                                  MOVE_BUTTON_BORDER_RADIUS)
+play_button: Button = Button("Play", PLAY_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
+move_button: Button = Button("", MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
+auto_move_button: Button = Button("", AUTO_MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
+confirm_end_round_button: Button = Button("Continue", CONFIRM_END_ROUND_BUTTON_POS, BUTTON_WIDTH,
+                                          BUTTON_HEIGHT, FONT)
 
 
 def update_positions(screen: Surface) -> None:
@@ -103,31 +85,23 @@ def update_positions(screen: Surface) -> None:
     global CARD_POSITIONS
     global PLAY_BUTTON_POS
     global MOVE_BUTTON_POS
+    global CONFIRM_END_ROUND_BUTTON_POS
     global AUTO_MOVE_BUTTON_POS
     global HAND_X, HAND_Y
-    global move_rect
-    global auto_move_rect
-    global play_rect
+
     WIDTH = screen.get_width()
     HEIGHT = screen.get_height()
 
     PLAY_BUTTON_POS = (WIDTH // 2, HEIGHT // 2)
-    play_rect = Rect(PLAY_BUTTON_POS[0] - PLAY_BUTTON_WIDTH // 2,
-                     PLAY_BUTTON_POS[1] - PLAY_BUTTON_HEIGHT // 2,
-                     PLAY_BUTTON_WIDTH, PLAY_BUTTON_HEIGHT)
-    play_button.rect = play_rect
     MOVE_BUTTON_POS = (WIDTH // 2, min(HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 5 // 2 -
-                                       MOVE_BUTTON_HEIGHT, HEIGHT // 2))
-    move_rect = Rect(MOVE_BUTTON_POS[0] - MOVE_BUTTON_WIDTH // 2,
-                     MOVE_BUTTON_POS[1] - MOVE_BUTTON_HEIGHT // 2,
-                     MOVE_BUTTON_WIDTH, MOVE_BUTTON_HEIGHT)
-    move_button.rect = move_rect
-    AUTO_MOVE_BUTTON_POS = (AUTO_MOVE_BUTTON_WIDTH // 2 + PADDING * 2,
-                            HEIGHT - AUTO_MOVE_BUTTON_HEIGHT // 2 - PADDING)
-    auto_move_rect = Rect(AUTO_MOVE_BUTTON_POS[0] - AUTO_MOVE_BUTTON_WIDTH // 2,
-                          AUTO_MOVE_BUTTON_POS[1] - AUTO_MOVE_BUTTON_HEIGHT // 2,
-                          AUTO_MOVE_BUTTON_WIDTH, AUTO_MOVE_BUTTON_HEIGHT)
-    auto_move_button.rect = auto_move_rect
+                                       BUTTON_HEIGHT, HEIGHT // 2))
+    AUTO_MOVE_BUTTON_POS = (BUTTON_WIDTH // 2 + PADDING, HEIGHT - BUTTON_HEIGHT // 2 - PADDING)
+    CONFIRM_END_ROUND_BUTTON_POS = (WIDTH // 2, HEIGHT * 3 // 4)
+
+    play_button.rect.center = PLAY_BUTTON_POS
+    move_button.rect.center = MOVE_BUTTON_POS
+    auto_move_button.rect.center = AUTO_MOVE_BUTTON_POS
+    confirm_end_round_button.rect.center = CONFIRM_END_ROUND_BUTTON_POS
 
     CARD_POSITIONS = [
         (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
@@ -135,6 +109,7 @@ def update_positions(screen: Surface) -> None:
         (WIDTH - PADDING * 2 - CARD_WIDTH, HEIGHT // 2 - CARD_HEIGHT // 2),
         (WIDTH // 2 - CARD_WIDTH // 2, HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2)
     ]
+
     HAND_X = WIDTH // 2
     HAND_Y = HEIGHT - CARD_HEIGHT - PADDING // 2
 
@@ -201,7 +176,7 @@ def display_move_button(screen: Surface, move: Move | None, game_state: GameStat
     move_button.set_centery(HEIGHT // 2 if game_state.phase != Phase.DRAWING or
                                            game_state.bid.owner != game_state.active_player
                             else min(HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2 -
-                                     MOVE_BUTTON_HEIGHT, HEIGHT // 2))
+                                     BUTTON_HEIGHT, HEIGHT // 2))
     return move_button.display(screen)
 
 
@@ -305,6 +280,28 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
     screen.blit(text_surface, text_rect)
 
 
+def display_round_summary(screen: Surface, game_state: GameState) -> None:
+    text_surface: Surface = HEADING_FONT.render("Round Summary", True, (255, 255, 255))
+    text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+    pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
+    screen.blit(text_surface, text_rect)
+    game_state.score_points(game_state.active_player)
+    text: str = (
+        f"Offense Points: {game_state.offense_points}\n"
+        f"Defense Points: {game_state.defense_points}\n"
+        f"Round Leader: Player {game_state.round_leader + 1}\n"
+        f"Dominant Rank: {game_state.dominant_rank}\n"
+        f"Trump Suit: {game_state.trump_suit.trump_str()}\n"
+        f"Current Levels: {game_state.team_levels}\n"
+        f"New Levels: {game_state.get_next_team_levels()}\n"
+        f"Next Round Leader: Player {game_state.get_next_round_leader() + 1}\n"
+    )
+    text_surface = FONT.render(text, True, (255, 255, 255))
+    text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
+    pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
+    screen.blit(text_surface, text_rect)
+
+
 def gui_loop() -> None:
     global WIDTH
     global HEIGHT
@@ -336,7 +333,7 @@ def gui_loop() -> None:
             elif event.type == pygame.VIDEORESIZE:
                 new_w, new_h = event.size
                 WIDTH, HEIGHT = max(MIN_WIDTH, new_w), max(MIN_HEIGHT, new_h)
-                print(WIDTH, HEIGHT)
+                # print(WIDTH, HEIGHT)
                 if new_w != WIDTH or new_h != HEIGHT:
                     screen = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
                 update_positions(screen)
@@ -351,11 +348,21 @@ def gui_loop() -> None:
                     menu = Menu.GAME
                     game_state: GameState = GameState()
                     moves: list[Move] = game_state.generate_moves()
-                    # while game_state.phase != Phase.BURYING:
-                    #     game_state.move(moves[0])
+                    # while game_state.phase != Phase.TRANSITION_ROUNDS:
+                    #     game_state.move(moves[random.randint(0, len(moves) - 1)])
                     #     moves = game_state.generate_moves()
+                    if game_state.phase == Phase.TRANSITION_ROUNDS:
+                        menu = Menu.ROUND_SUMMARY
                     automatic_pass: bool = False
                     last_move_time: float = pygame.time.get_ticks()
+                pygame.display.flip()
+                continue
+            case Menu.ROUND_SUMMARY:
+                display_round_summary(screen, game_state)
+                if confirm_end_round_button.display(screen):
+                    game_state.move(Move(Bid(True, None, 0, -1)))
+                    menu = Menu.GAME
+                    moves = game_state.generate_moves()
                 pygame.display.flip()
                 continue
             case Menu.GAME:
@@ -386,49 +393,9 @@ def gui_loop() -> None:
                         for card in card_selection:
                             hover_anim[card].current = y
                             card_selection[card] = False
+                        if game_state.phase == Phase.TRANSITION_ROUNDS:
+                            menu = Menu.ROUND_SUMMARY
                 pygame.display.flip()
-
-
-def terminal_game_loop() -> None:
-    game_state = GameState()
-    auto: bool = False
-    while game_state.is_in_progress():
-        moves: list[Move] = game_state.generate_moves()
-        print(f"Player {game_state.active_player + 1} move")
-        print(f"Hand: {game_state.show_current_hand()}")
-        if game_state.phase == Phase.TRICK_TAKING:
-            print(f"Current Trick: {game_state.show_current_trick()}")
-        print("Available Moves:")
-        print(''.join(f"{i + 1} : {move}\n" for i, move in enumerate(moves)))
-        move: int = 0
-        while not auto or len(moves) > 1:
-            move_str = input("Enter move index or command: ").lower()
-            if move_str == "": break
-            if move_str == "h" or move_str == "help":
-                print(HELP_TEXT)
-                continue
-            if move_str == "a" or move_str == "auto":
-                auto = not auto
-                print(f"Automatic Move Mode: {"Enabled" if auto else "Disabled"}")
-                continue
-            if move_str == "i" or move_str == "info":
-                print(f"Game Phase: {game_state.phase}")
-                print(f"Dominant Rank: {game_state.dominant_rank}")
-                if game_state.phase == Phase.DRAWING:
-                    print(f"Bid: {game_state.bid}")
-                    print(f"Bid Owner: {game_state.bid.owner}")
-                if game_state.phase == Phase.TRICK_TAKING or game_state.phase == Phase.BURYING:
-                    print(f"Trump Suit: {game_state.trump_suit}")
-                    print(f"Trick Leader: {game_state.trick_leader}")
-                print()
-                continue
-            if move_str == "q" or move_str == "quit":
-                if "y" == input("Are you sure you want to quit? [y/N] "): return
-                continue
-            if move_str.isnumeric():
-                move = int(move_str) - 1
-                if 0 <= move < len(moves): break
-        game_state.move(moves[move])
 
 
 def main() -> None:
