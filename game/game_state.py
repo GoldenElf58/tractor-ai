@@ -335,7 +335,9 @@ class GameState:
             self.round_leader = (self.round_leader + 2) % 4
             if self.team_levels[self.round_leader % 2] == 14:
                 self.phase = Phase.GAME_END
+                self.dominant_rank = 14
                 self.team_levels[self.round_leader % 2] = 15
+                self.setup_round()
                 return
             if self.offense_points == 0:
                 self.team_levels[self.round_leader % 2] += 3
@@ -343,15 +345,19 @@ class GameState:
                 self.team_levels[self.round_leader % 2] += 2
             else:
                 self.team_levels[self.round_leader % 2] += 1
+            if self.defense_points >= 200:
+                self.team_levels[self.round_leader % 2] += 1
         else:
             self.round_leader = (self.round_leader + 1) % 4
             if self.offense_points < 120:
                 pass
             elif self.offense_points < 160:
                 self.team_levels[self.round_leader % 2] += 1
-            else:
+            elif self.offense_points < 200:
                 self.team_levels[self.round_leader % 2] += 2
-        self.team_levels[self.round_leader % 2] = max(self.team_levels[self.round_leader % 2], 14)
+            else:
+                self.team_levels[self.round_leader % 2] += 3
+        self.team_levels[self.round_leader % 2] = min(self.team_levels[self.round_leader % 2], 14)
         self.dominant_rank = self.team_levels[self.round_leader % 2]
         self.setup_round()
 
@@ -366,6 +372,6 @@ class GameState:
         self.defense_points = sum(
             get_trick_points(trick) for trick in (*self.players[player_c].tricks,
                                                   *self.players[player_d].tricks))
-        if end_of_round and trick_winner == player_a or trick_winner == player_b:
+        if end_of_round and (trick_winner == player_a or trick_winner == player_b):
             self.offense_points += sum(get_card_points(card) for card in self.trash) * \
                                    self.curr_trick[0].quantity * 2
