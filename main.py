@@ -84,7 +84,8 @@ NAME_TEXTBOX_POSITIONS: list[tuple[int, int]] = [
 CONFIRM_NAMES_BUTTON_POS: tuple[int, int] = (WIDTH // 2,
                                              HEIGHT // 2 + (TEXTBOX_HEIGHT + PADDING) * 3)
 
-MAX_NAME_LENGTH: int = 15
+MAX_NAME_LENGTH: int = 32
+MAX_NAME_WIDTH: int = 180
 
 textboxes: list[Textbox] = \
     [Textbox(FONT, pos, TEXTBOX_WIDTH, TEXTBOX_HEIGHT, default_text=f"Player {i + 1}") for i, pos in
@@ -376,7 +377,7 @@ def display_round_summary(screen: Surface, game_state: GameState) -> None:
 
 
 def display_name_players(screen: Surface) -> None:
-    text_surface: Surface = HEADING_FONT.render("Name Players", True, TEXT_COLOR)
+    text_surface: Surface = HEADING_FONT.render("Player Names", True, TEXT_COLOR)
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
     pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
     screen.blit(text_surface, text_rect)
@@ -469,8 +470,9 @@ def gui_loop() -> None:
                                     textboxes[i + 1].selected = True
                             elif event.key == pygame.K_ESCAPE:
                                 textbox.selected = False
-                            elif len(textbox.text) < MAX_NAME_LENGTH and not (
-                                    event.mod & (pygame.KMOD_CTRL | pygame.KMOD_META)):
+                            elif (len(textbox.text) < MAX_NAME_LENGTH and
+                                  not (event.mod & (pygame.KMOD_CTRL | pygame.KMOD_META)) and
+                                  FONT.size(textbox.text + event.unicode)[0] <= MAX_NAME_WIDTH):
                                 textbox.text += event.unicode
                             break
                 if event.key == pygame.K_SPACE and menu == Menu.GAME:
