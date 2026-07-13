@@ -8,6 +8,7 @@ class Player:
         self.id: int = player_id
         self.cards: list[Card] = []
         self.tricks: list[tuple[Play, ...]] = []
+        self.name: str = f"Player {player_id + 1}"
 
     def remove_card(self, card: Card) -> Card:
         self.cards.remove(card)

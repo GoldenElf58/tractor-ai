@@ -390,3 +390,14 @@ class GameState:
                 (trick_winner == player_a or trick_winner == player_b)):
             self.offense_points += sum(get_card_points(card) for card in self.trash) * \
                                    self.last_trick[0].quantity * 2
+
+    def set_player_names(self, names: list[str]):
+        for i, name in enumerate(names):
+            self.players[i].name = name
+
+    def get_player_name(self, player_id: int):
+        if player_id < 0 or player_id > len(self.players): raise ValueError("Invalid player ID")
+        return self.players[player_id].name
+
+    def get_active_player_name(self) -> str:
+        return self.get_player_name(self.active_player)

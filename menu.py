@@ -4,3 +4,4 @@ class Menu(Enum):
     TITLE = auto()
     GAME = auto()
     ROUND_SUMMARY = auto()
+    NAME_PLAYERS = auto()
