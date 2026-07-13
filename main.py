@@ -62,6 +62,7 @@ AUTO_MOVE_BUTTON_POS: tuple[int, int] = (BUTTON_WIDTH // 2 + PADDING,
                                          HEIGHT - BUTTON_HEIGHT // 2 - PADDING)
 PLAY_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT // 2)
 CONFIRM_END_ROUND_BUTTON_POS: tuple[int, int] = (WIDTH // 2, HEIGHT * 3 // 4)
+START_TURN_BUTTON_POS: tuple[int, int] = (HAND_X, HAND_Y)
 
 AUTO_PASS_TIME: int = 100  # ms
 AUTO_PLAY_TIME: int = 1000  # ms
@@ -101,6 +102,7 @@ move_button: Button = Button("", MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, F
 auto_move_button: Button = Button("", AUTO_MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
 confirm_end_round_game_button: Button = Button("Continue", CONFIRM_END_ROUND_BUTTON_POS,
                                                BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
+start_turn_button: Button = Button("", START_TURN_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
 
 
 def update_positions(screen: Surface) -> None:
@@ -112,6 +114,7 @@ def update_positions(screen: Surface) -> None:
     global PLAY_BUTTON_POS
     global MOVE_BUTTON_POS
     global CONFIRM_END_ROUND_BUTTON_POS
+    global START_TURN_BUTTON_POS
     global AUTO_MOVE_BUTTON_POS
     global HAND_X, HAND_Y
 
@@ -123,12 +126,14 @@ def update_positions(screen: Surface) -> None:
                                        BUTTON_HEIGHT, HEIGHT // 2))
     AUTO_MOVE_BUTTON_POS = (BUTTON_WIDTH // 2 + PADDING, HEIGHT - BUTTON_HEIGHT // 2 - PADDING)
     CONFIRM_END_ROUND_BUTTON_POS = (WIDTH // 2, HEIGHT * 3 // 4)
+    START_TURN_BUTTON_POS = PLAY_BUTTON_POS
 
-    play_button.rect.center = PLAY_BUTTON_POS
-    confirm_names_button.rect.center = CONFIRM_NAMES_BUTTON_POS
-    move_button.rect.center = MOVE_BUTTON_POS
-    auto_move_button.rect.center = AUTO_MOVE_BUTTON_POS
-    confirm_end_round_game_button.rect.center = CONFIRM_END_ROUND_BUTTON_POS
+    play_button.set_center(PLAY_BUTTON_POS)
+    confirm_names_button.set_center(CONFIRM_NAMES_BUTTON_POS)
+    move_button.set_center(MOVE_BUTTON_POS)
+    auto_move_button.set_center(AUTO_MOVE_BUTTON_POS)
+    confirm_end_round_game_button.set_center(CONFIRM_END_ROUND_BUTTON_POS)
+    start_turn_button.set_center(START_TURN_BUTTON_POS)
 
     CARD_POSITIONS = [
         (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
@@ -146,7 +151,7 @@ def update_positions(screen: Surface) -> None:
 
     CONFIRM_NAMES_BUTTON_POS = (WIDTH // 2, HEIGHT // 2 + (TEXTBOX_HEIGHT + PADDING) * 3)
     for i, textbox in enumerate(textboxes):
-        textbox.rect.center = NAME_TEXTBOX_POSITIONS[i]
+        textbox.set_center(NAME_TEXTBOX_POSITIONS[i])
 
     HAND_X = WIDTH // 2
     HAND_Y = HEIGHT - CARD_HEIGHT - PADDING // 2
@@ -400,6 +405,15 @@ def display_game_end(screen: Surface, game_state: GameState) -> None:
     display_centered_info_text(screen, text, WIDTH // 2, HEIGHT // 2)
 
 
+def display_start_turn_button(screen: Surface, game_state: GameState):
+    start_turn_button.set_text(f"Start {game_state.get_active_player_name()}'s Turn")
+    start_turn_button.set_centery(HEIGHT // 2 if game_state.phase != Phase.DRAWING or
+                                                 game_state.bid.owner != game_state.active_player
+                                  else min(HEIGHT - CARD_HEIGHT * 5 // 2 - PADDING * 3 // 2 -
+                                           BUTTON_HEIGHT, HEIGHT // 2))
+    return start_turn_button.display(screen)
+
+
 def gui_loop() -> None:
     global WIDTH
     global HEIGHT
@@ -415,6 +429,7 @@ def gui_loop() -> None:
     #     moves = game_state.generate_moves()
     automatic_pass: bool = False
     last_move_time: float = pygame.time.get_ticks()
+    turn_started = False
     while True:
         delta_time: float = clock.tick(60)
         update_positions(screen)
@@ -519,11 +534,15 @@ def gui_loop() -> None:
                 pygame.display.flip()
                 continue
             case Menu.GAME:
-                display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
-                             pygame.mouse.get_pos(), delta_time, pygame.mouse.get_just_pressed()[0],
-                             moves)
-                move_requested: bool = display_move_button(screen, get_selected_move(moves),
-                                                           game_state)
+                move_requested: bool = False
+                if turn_started:
+                    display_hand(screen, game_state.get_active_player().cards, (HAND_X, HAND_Y),
+                                 pygame.mouse.get_pos(), delta_time,
+                                 pygame.mouse.get_just_pressed()[0], moves)
+                    move_requested = display_move_button(screen, get_selected_move(moves),
+                                                         game_state)
+                elif display_start_turn_button(screen, game_state):
+                    turn_started = True
                 display_info(screen, game_state, FONT)
                 display_current_trick(screen, game_state)
                 if game_state.phase == Phase.DRAWING and display_auto_move_button(screen,
@@ -538,6 +557,7 @@ def gui_loop() -> None:
                     selected_move = get_selected_move(moves)
                     if selected_move is not None:
                         last_move_time = pygame.time.get_ticks()
+                        turn_started = False
                         game_state.move(selected_move)
                         game_state.score_points(-1)
                         moves = game_state.generate_moves()

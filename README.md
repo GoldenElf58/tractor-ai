@@ -17,6 +17,7 @@ model to play Tractor.
 ## Features
 
 * Interactive GUI
+* Player hand hiding for pass-and-play
 * Core game flow (drawing, bidding, kitty, trick-taking, scoring)
 * Single, pair, tractor, and consecutive pair trick types
 * Legal move generation

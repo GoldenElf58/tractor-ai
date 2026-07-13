@@ -1,3 +1,5 @@
+from idlelib.multicall import MC_ENTER
+
 import pygame
 from pygame import Font, Color
 from pygame.rect import Rect
@@ -33,6 +35,10 @@ class Textbox:
         mouse_x: int = pygame.mouse.get_pos()[0]
         mouse_y: int = pygame.mouse.get_pos()[1]
         return self.rect.collidepoint(mouse_x, mouse_y)
+
+    def set_center(self, center: tuple[int, int]):
+        self.center = center
+        self.rect.center = center
 
     def display(self, screen: Surface) -> None:
         hovering: bool = self.mouse_is_hovering()
