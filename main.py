@@ -1,5 +1,3 @@
-import random
-
 import pygame
 from pygame import Surface, Clock, Font, Color
 from pygame.rect import Rect
@@ -31,6 +29,7 @@ PADDING: int = 25
 PEAK_HEIGHT: int = 15
 HEIGHT_INCREASE: int = 30
 BACKGROUND_COLOR: Color | tuple[int, int, int] = (12, 12, 12)
+TEXT_COLOR: Color | tuple[int, int, int] = (255, 255, 255)
 FONT: Font = pygame.font.SysFont("arial", 20)
 HEADING_FONT: Font = pygame.font.SysFont("arial", 40)
 TITLE_FONT: Font = pygame.font.SysFont("arial", 60)
@@ -226,7 +225,7 @@ def display_auto_move_button(screen: Surface, automatic_pass: bool) -> bool:
 
 def display_player_name(screen: Surface, name: str, position: tuple[int, int],
                         attr: str = "center") -> None:
-    player_surface = FONT.render(name, True, (255, 255, 255))
+    player_surface = FONT.render(name, True, TEXT_COLOR)
     player_rect = player_surface.get_rect()
     player_rect.__setattr__(attr, position)
     if player_rect.left - PADDING // 2 < 0: player_rect.left = PADDING // 2
@@ -313,40 +312,58 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
                   if game_state.phase == Phase.TRICK_TAKING or
                      game_state.phase == Phase.GAME_END else "")
                  )
-    text_surface: Surface = font.render(text, True, (255, 255, 255))
+    text_surface: Surface = font.render(text, True, TEXT_COLOR)
     info_rect: Rect = text_surface.get_rect(topleft=(25, 25))
     pygame.draw.rect(screen, BACKGROUND_COLOR, info_rect)
     screen.blit(text_surface, (25, 25))
-    text_surface = font.render(game_state.get_active_player_name(), True, (255, 255, 255))
+    text_surface = font.render(game_state.get_active_player_name(), True, TEXT_COLOR)
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT - PADDING * 1.5))
     pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
     screen.blit(text_surface, text_rect)
 
 
 def display_round_summary(screen: Surface, game_state: GameState) -> None:
-    text_surface: Surface = HEADING_FONT.render("Round Summary", True, (255, 255, 255))
+    text_surface: Surface = HEADING_FONT.render("Round Summary", True, TEXT_COLOR)
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
     pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
     screen.blit(text_surface, text_rect)
     game_state.score_points(game_state.active_player)
     text: str = (
-        f"Offense Points: {game_state.offense_points}\n"
-        f"Defense Points: {game_state.defense_points}\n"
-        f"Round Leader: {game_state.get_player_name(game_state.round_leader)}\n"
-        f"Dominant Rank: {game_state.dominant_rank}\n"
-        f"Trump Suit: {game_state.trump_suit.trump_str()}\n"
-        f"Current Levels: {game_state.team_levels}\n"
-        f"New Levels: {game_state.get_next_team_levels()}\n"
-        f"Next Round Leader: {game_state.get_player_name(game_state.get_next_round_leader())}\n"
+        f"Offense Points\t{game_state.offense_points}\n"
+        f"Defense Points\t{game_state.defense_points}\n"
+        f"Trump Suit\t{game_state.trump_suit.trump_str()}\n"
+        f"Dominant Rank\t{game_state.dominant_rank} → {game_state.get_next_dominant_rank()}\n"
+        f"Round Leader\t{game_state.get_player_name(game_state.round_leader)} → "
+        f"{game_state.get_player_name(game_state.get_next_round_leader())}\n"
+        f"{game_state.get_player_name(0)} and {game_state.get_player_name(2)} Level\t"
+        f"{game_state.team_levels[0]} → {game_state.get_next_team_levels()[0]}\n"
+        f"{game_state.get_player_name(1)} and {game_state.get_player_name(3)} Level\t"
+        f"{game_state.team_levels[1]} → {game_state.get_next_team_levels()[1]}"
     )
-    text_surface = FONT.render(text, True, (255, 255, 255))
-    text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 2))
-    pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
-    screen.blit(text_surface, text_rect)
+    text_surface = FONT.render(text, True, TEXT_COLOR)
+    height = text_surface.get_height()
+    width = text_surface.get_width()
+    top = text_surface.get_rect(centery=HEIGHT // 2).top
+    lines = [line.split('\t') for line in text.split('\n')]
+    left_len: float = sum(len(left) for left, _ in lines) / len(lines) + 2
+    right_len: float = sum(len(right) for _, right in lines) / len(lines) + 2
+    middle = WIDTH // 2 + (left_len / (left_len + right_len) * width) * 0
+    for i, (left, right) in enumerate(lines):
+        left += ': '
+        right = " " + right
+        # print(left, right)
+        left_surface = FONT.render(left, True, TEXT_COLOR)
+        right_surface = FONT.render(right, True, TEXT_COLOR)
+        left_rect = left_surface.get_rect(right=middle, top=top + (i / len(lines)) * height)
+        right_rect = right_surface.get_rect(left=middle, top=top + (i / len(lines)) * height)
+        pygame.draw.rect(screen, BACKGROUND_COLOR, left_rect)
+        pygame.draw.rect(screen, BACKGROUND_COLOR, right_rect)
+        screen.blit(left_surface, left_rect)
+        screen.blit(right_surface, right_rect)
 
 
 def display_name_players(screen: Surface) -> None:
-    text_surface: Surface = HEADING_FONT.render("Name Players", True, (255, 255, 255))
+    text_surface: Surface = HEADING_FONT.render("Name Players", True, TEXT_COLOR)
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
     pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
     screen.blit(text_surface, text_rect)
@@ -432,7 +449,7 @@ def gui_loop() -> None:
         screen.fill(BACKGROUND_COLOR)
         match menu:
             case Menu.TITLE:
-                text_surface = TITLE_FONT.render("Tractor", True, (255, 255, 255))
+                text_surface = TITLE_FONT.render("Tractor", True, TEXT_COLOR)
                 text_rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
                 screen.blit(text_surface, text_rect)
                 if play_button.display(screen):

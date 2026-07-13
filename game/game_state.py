@@ -364,6 +364,9 @@ class GameState:
         next_levels[next_round_leader % 2] = min(next_levels[next_round_leader % 2], 14)
         return next_levels
 
+    def get_next_dominant_rank(self):
+        return self.get_next_team_levels()[self.get_next_round_leader() % 2]
+
     def transition_rounds(self, trick_winner: int):
         self.score_points(trick_winner)
         self.phase = Phase.DRAWING
