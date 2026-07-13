@@ -3,13 +3,10 @@ from pygame import Surface, Clock, Font, Color
 from pygame.rect import Rect
 from pygame.transform import smoothscale_by
 
-from animation import Animation
-from button import Button
+from ui import Animation, Button, Menu, Textbox
 from game import Card, GameState, Phase, FaceSuit, Bid, Play
 from game.game_state import generate_deck
 from game.move import Move
-from menu import Menu
-from textbox import Textbox
 from utils import ease_out_cubic
 
 pygame.init()

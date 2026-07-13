@@ -28,15 +28,15 @@ goal is to train a machine learning model to play Tractor.
 
 ### Gameplay
 
-![Gameplay recording](gameplay-recording.gif)
+![Gameplay recording](images/gameplay-recording.gif)
 
 ### Round Summary
 
-![Round summary](round-summary.png)
+![Round summary](images/round-summary.png)
 
 ### Game Over Screen
 
-![Game over screen](game-over.png)
+![Game over screen](images/game-over.png)
 
 ## Installation
 
