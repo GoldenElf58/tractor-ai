@@ -172,7 +172,8 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
                                 start_x + i * PADDING <= mouse_pos[0] <
                                 start_x + i * PADDING + images[card].get_width() and
                                 (i == len(hand) - 1 or hover_anim[hand[i + 1]].end > mouse_pos[1]))
-        if mouse_clicked and hovering:
+        if ((mouse_clicked or (hover_anim[card].end == y
+                               and pygame.mouse.get_pressed()[0])) and hovering):
             card_selection[card] = not card_selection[card]
             if moves[0].type == Phase.BURYING and card_selection[card]:
                 if len(selected_cards) < 8:
@@ -182,18 +183,23 @@ def display_hand(screen: Surface, hand: list[Card], center_pos: tuple[int, int],
             elif card_selection[card]:
                 selected_cards.add(card)
                 possible_moves: list[Move] = [move for move in moves if card in move]
-                for secondary_card in selected_cards:
-                    present = False
-                    for move in possible_moves:
-                        if secondary_card in move:
-                            present = True
-                            break
-                    if not present:
-                        card_selection[secondary_card] = False
-                for selected_card in card_selection:
-                    present: bool = any(other.exact_card(selected_card) for other in selected_cards)
-                    if present and not card_selection[selected_card]:
-                        selected_cards.remove(selected_card)
+                if len(possible_moves) == 0:
+                    card_selection[card] = False
+                    selected_cards.remove(card)
+                else:
+                    for secondary_card in selected_cards:
+                        present = False
+                        for move in possible_moves:
+                            if secondary_card in move:
+                                present = True
+                                break
+                        if not present:
+                            card_selection[secondary_card] = False
+                    for selected_card in card_selection:
+                        present: bool = any(other.exact_card(selected_card) for other in
+                                            selected_cards)
+                        if present and not card_selection[selected_card]:
+                            selected_cards.remove(selected_card)
             else:
                 selected_cards.remove(card)
         if card_selection[card]:
