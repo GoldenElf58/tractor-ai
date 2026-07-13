@@ -4,11 +4,11 @@ from random import shuffle
 from .bid import Bid
 from .card import Card
 from .effective_suit import EffectiveSuit
+from .face_suit import FaceSuit
 from .move import Move
 from .phase import Phase
 from .play import Play
 from .player import Player
-from .face_suit import FaceSuit
 from .trump_info import TrumpInfo
 
 
@@ -299,6 +299,9 @@ class GameState:
                 return [Play(cards, self.active_player) for cards in rem_card_possibilities]
             for play in consecutive_doubles:
                 for rem_cards in rem_card_possibilities:
+                    if any(any(card.exact_card(rem_card) for rem_card in rem_cards) for card in
+                           play.cards):
+                        continue
                     consec_double_cards = play.cards.copy()
                     consec_double_cards.extend(rem_cards)
                     plays.append(Play(consec_double_cards, self.active_player))
@@ -404,3 +407,7 @@ class GameState:
 
     def get_active_player_name(self) -> str:
         return self.get_player_name(self.active_player)
+
+    def get_winning_team(self) -> int:
+        if self.phase != Phase.GAME_END: raise ValueError("Game not over yet")
+        return self.round_leader % 2

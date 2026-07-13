@@ -19,12 +19,12 @@ model to play Tractor.
 * Interactive GUI
 * Core game flow (drawing, bidding, kitty, trick-taking, scoring)
 * Single, pair, tractor, and consecutive pair trick types
-* Round summary when transitioning rounds
 * Legal move generation
-* Automatic pass mode (during drawing/bidding phase)
-* Cross-platform builds (Windows, macOS, Linux)
+* Round summary when transitioning rounds
 * Player name customization
-* End-of-game scoring screen not yet implemented
+* Automatic pass mode (during drawing/bidding phase)
+* Game over screen
+* Cross-platform builds (Windows, macOS, Linux)
 
 ![gameplay-recording.gif](gameplay-recording.gif)
 

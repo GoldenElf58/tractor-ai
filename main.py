@@ -99,8 +99,8 @@ confirm_names_button: Button = Button("Confirm", CONFIRM_NAMES_BUTTON_POS, BUTTO
                                       BUTTON_HEIGHT, FONT)
 move_button: Button = Button("", MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
 auto_move_button: Button = Button("", AUTO_MOVE_BUTTON_POS, BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
-confirm_end_round_button: Button = Button("Continue", CONFIRM_END_ROUND_BUTTON_POS, BUTTON_WIDTH,
-                                          BUTTON_HEIGHT, FONT)
+confirm_end_round_game_button: Button = Button("Continue", CONFIRM_END_ROUND_BUTTON_POS,
+                                               BUTTON_WIDTH, BUTTON_HEIGHT, FONT)
 
 
 def update_positions(screen: Surface) -> None:
@@ -128,7 +128,7 @@ def update_positions(screen: Surface) -> None:
     confirm_names_button.rect.center = CONFIRM_NAMES_BUTTON_POS
     move_button.rect.center = MOVE_BUTTON_POS
     auto_move_button.rect.center = AUTO_MOVE_BUTTON_POS
-    confirm_end_round_button.rect.center = CONFIRM_END_ROUND_BUTTON_POS
+    confirm_end_round_game_button.rect.center = CONFIRM_END_ROUND_BUTTON_POS
 
     CARD_POSITIONS = [
         (PADDING * 2, HEIGHT // 2 - CARD_HEIGHT // 2),
@@ -322,6 +322,33 @@ def display_info(screen: Surface, game_state: GameState, font: Font) -> None:
     screen.blit(text_surface, text_rect)
 
 
+def display_centered_info_text(screen: Surface, text: str, centerx: int, centery: int):
+    text_surface = FONT.render(text, True, TEXT_COLOR)
+    height = text_surface.get_height()
+    width = text_surface.get_width()
+    top = text_surface.get_rect(centery=centery).top
+    lines = [line.split('\t') for line in text.split('\n')]
+    left_len: float = sum(len(line[0]) for line in lines if len(line) == 2) / len(lines) + 2
+    right_len: float = sum(len(line[1]) for line in lines if len(line) == 2) / len(lines) + 2
+    middle = centerx + (left_len / (left_len + right_len) * width) * 0
+    for i, line in enumerate(lines):
+        if len(line) != 2:
+            text_surface = FONT.render(line[0], True, TEXT_COLOR)
+            text_rect = text_surface.get_rect(right=middle, top=top + (i / len(lines)) * height)
+            screen.blit(text_surface, text_rect)
+            continue
+        left = line[0] + ': '
+        right = " " + line[1]
+        left_surface = FONT.render(left, True, TEXT_COLOR)
+        right_surface = FONT.render(right, True, TEXT_COLOR)
+        left_rect = left_surface.get_rect(right=middle, top=top + (i / len(lines)) * height)
+        right_rect = right_surface.get_rect(left=middle, top=top + (i / len(lines)) * height)
+        pygame.draw.rect(screen, BACKGROUND_COLOR, left_rect)
+        pygame.draw.rect(screen, BACKGROUND_COLOR, right_rect)
+        screen.blit(left_surface, left_rect)
+        screen.blit(right_surface, right_rect)
+
+
 def display_round_summary(screen: Surface, game_state: GameState) -> None:
     text_surface: Surface = HEADING_FONT.render("Round Summary", True, TEXT_COLOR)
     text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
@@ -340,26 +367,7 @@ def display_round_summary(screen: Surface, game_state: GameState) -> None:
         f"{game_state.get_player_name(1)} and {game_state.get_player_name(3)} Level\t"
         f"{game_state.team_levels[1]} → {game_state.get_next_team_levels()[1]}"
     )
-    text_surface = FONT.render(text, True, TEXT_COLOR)
-    height = text_surface.get_height()
-    width = text_surface.get_width()
-    top = text_surface.get_rect(centery=HEIGHT // 2).top
-    lines = [line.split('\t') for line in text.split('\n')]
-    left_len: float = sum(len(left) for left, _ in lines) / len(lines) + 2
-    right_len: float = sum(len(right) for _, right in lines) / len(lines) + 2
-    middle = WIDTH // 2 + (left_len / (left_len + right_len) * width) * 0
-    for i, (left, right) in enumerate(lines):
-        left += ': '
-        right = " " + right
-        # print(left, right)
-        left_surface = FONT.render(left, True, TEXT_COLOR)
-        right_surface = FONT.render(right, True, TEXT_COLOR)
-        left_rect = left_surface.get_rect(right=middle, top=top + (i / len(lines)) * height)
-        right_rect = right_surface.get_rect(left=middle, top=top + (i / len(lines)) * height)
-        pygame.draw.rect(screen, BACKGROUND_COLOR, left_rect)
-        pygame.draw.rect(screen, BACKGROUND_COLOR, right_rect)
-        screen.blit(left_surface, left_rect)
-        screen.blit(right_surface, right_rect)
+    display_centered_info_text(screen, text, WIDTH // 2, HEIGHT // 2)
 
 
 def display_name_players(screen: Surface) -> None:
@@ -373,6 +381,23 @@ def display_name_players(screen: Surface) -> None:
 
 def get_player_names() -> list[str]:
     return [textbox.get_output() for textbox in textboxes]
+
+
+def display_game_end(screen: Surface, game_state: GameState) -> None:
+    text_surface: Surface = TITLE_FONT.render("Game Over", True, TEXT_COLOR)
+    text_rect: Rect = text_surface.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+    pygame.draw.rect(screen, BACKGROUND_COLOR, text_rect)
+    screen.blit(text_surface, text_rect)
+    winning_team: int = game_state.get_winning_team()
+    text = (
+        f"Winners\t{game_state.get_player_name(winning_team)} and "
+        f"{game_state.get_player_name(winning_team + 2)}\n"
+        f"{game_state.get_player_name(0)} and {game_state.get_player_name(2)} Level\t"
+        f"{min(14, game_state.team_levels[0])}\n"
+        f"{game_state.get_player_name(1)} and {game_state.get_player_name(3)} Level\t"
+        f"{min(14, game_state.team_levels[1])}\n "
+    )
+    display_centered_info_text(screen, text, WIDTH // 2, HEIGHT // 2)
 
 
 def gui_loop() -> None:
@@ -457,7 +482,10 @@ def gui_loop() -> None:
                     game_state: GameState = GameState()
                     moves: list[Move] = game_state.generate_moves()
                     # while game_state.phase != Phase.TRANSITION_ROUNDS:
-                    #     game_state.move(moves[random.randint(0, len(moves) - 1)])
+                    #     if len(moves) == 0:
+                    #         game_state.move(Move(Bid(True, None, 0, -1)))
+                    #     else:
+                    #         game_state.move(moves[random.randint(0, len(moves) - 1)])
                     #     moves = game_state.generate_moves()
                     automatic_pass: bool = False
                     last_move_time: float = pygame.time.get_ticks()
@@ -472,14 +500,22 @@ def gui_loop() -> None:
                     menu = Menu.GAME
                     if game_state.phase == Phase.TRANSITION_ROUNDS:
                         menu = Menu.ROUND_SUMMARY
+                    elif game_state.phase == Phase.GAME_END:
+                        menu = Menu.GAME_END
                 pygame.display.flip()
                 continue
             case Menu.ROUND_SUMMARY:
                 display_round_summary(screen, game_state)
-                if confirm_end_round_button.display(screen):
+                if confirm_end_round_game_button.display(screen):
                     game_state.move(Move(Bid(True, None, 0, -1)))
                     menu = Menu.GAME
                     moves = game_state.generate_moves()
+                pygame.display.flip()
+                continue
+            case Menu.GAME_END:
+                display_game_end(screen, game_state)
+                if confirm_end_round_game_button.display(screen):
+                    menu = Menu.TITLE
                 pygame.display.flip()
                 continue
             case Menu.GAME:
@@ -512,6 +548,8 @@ def gui_loop() -> None:
                             card_selection[card] = False
                         if game_state.phase == Phase.TRANSITION_ROUNDS:
                             menu = Menu.ROUND_SUMMARY
+                        elif game_state.phase == Phase.GAME_END:
+                            menu = Menu.GAME_END
                 pygame.display.flip()
 
 
