@@ -44,23 +44,26 @@ Follow the steps below to download and run the project on your operating system.
 
 ### Windows
 
-Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases). Download and run
+Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases). Download
+`tractor-ai-windows.zip`, extract it, open the `tractor-ai-windows` folder, and run
 `tractor-ai-windows.exe`. You're good to go!
 
 ### macOS
 
 Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) and download
-`tractor-ai-macos.zip`. **Intel Macs are currently not supported.** Extract the zip file and run
-`tractor-ai-macos`. If you get a message that says "Apple could not verify “tractor-ai-macos” is
-free of malware that may harm your Mac or compromise your privacy," click "Done". Go to System
-Settings/Privacy & Security and scroll down to the Security section. Click "Open Anyway" next to
-the message that says "tractor-ai-macos was blocked to protect your app". Click "Open Anyway" one
-more time, then type in your password. You're good to go!
+`tractor-ai-macos.zip`. **Intel Macs are currently not supported.** Extract the zip file and
+open the `tractor-ai-macos` folder, and run `tractor-ai-macos` (in the folder). If you get a
+message that says "Apple could not verify “tractor-ai-macos” is free of malware that may harm your
+Mac or compromise your privacy," click "Done". Go to System Settings/Privacy & Security and scroll
+down to the Security section. Click "Open Anyway" next to the message that says "tractor-ai-macos
+was blocked to protect your app". Click "Open Anyway" one more time, then type in your password.
+You're good to go!
 
 ### Linux
 
 Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) and download
-`tractor-ai-linux.zip`. Extract the zip file and run `tractor-ai-linux`. You're good to go!
+`tractor-ai-linux.zip`. Extract the zip file, open the `tractor-ai-linux` folder, and run
+`tractor-ai-linux` (in the folder). You're good to go!
 
 ## How To Play
 

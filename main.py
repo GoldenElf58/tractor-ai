@@ -1,3 +1,4 @@
+print("Loading... (This may take a moment)")
 import sys
 
 import pygame
@@ -428,7 +429,6 @@ def display_start_turn_button(screen: Surface, game_state: GameState):
 def gui_loop() -> None:
     global WIDTH
     global HEIGHT
-    pygame.init()
     pygame.key.set_repeat(500, 50)
     screen: Surface = pygame.display.set_mode((WIDTH, HEIGHT), pygame.RESIZABLE)
     clock: Clock = pygame.time.Clock()
