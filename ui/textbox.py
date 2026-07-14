@@ -1,5 +1,3 @@
-from idlelib.multicall import MC_ENTER
-
 import pygame
 from pygame import Font, Color
 from pygame.rect import Rect
@@ -19,8 +17,8 @@ class Textbox:
         self.width = self.rect.width
         self.center = self.rect.center
         self.text_color: Color = text_color if text_color is not None else Color(255, 255, 255)
-        self.default_text_color: Color = text_color if text_color is not None else (
-            Color(150, 150, 150))
+        self.default_text_color: Color = default_text_color if default_text_color is not None else \
+            text_color if text_color is not None else Color(150, 150, 150)
         self.bg_color: Color = bg_color if bg_color is not None else Color(40, 40, 40)
         self.border_radius: int = border_radius
         self.selected = False

@@ -9,7 +9,8 @@ class Button:
                  font: Font, text_color: Color | None = None,
                  btn_color: Color | None = None, btn_hover_color: Color | None = None,
                  btn_pressed_color: Color | None = None, border_radius: int = 10):
-        self._rect: Rect = Rect(centerpos[0] - width // 2, centerpos[1] - height // 2, width, height)
+        self._rect: Rect = Rect(centerpos[0] - width // 2, centerpos[1] - height // 2, width,
+                                height)
         self.width = self.rect.width
         self.center: tuple[int, int] = self.rect.center
         self.text: str = text

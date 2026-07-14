@@ -1,3 +1,5 @@
+import sys
+
 import pygame
 from pygame import Surface, Clock, Font, Color
 from pygame.rect import Rect
@@ -8,6 +10,8 @@ from game import Card, GameState, Phase, FaceSuit, Bid, Play
 from game.game_state import generate_deck
 from game.move import Move
 from utils import ease_out_cubic
+
+from pathlib import Path
 
 pygame.init()
 
@@ -36,8 +40,11 @@ HEIGHT = 720
 MIN_WIDTH = 1000
 MIN_HEIGHT = 660
 
+BASE_PATH: Path = Path(getattr(sys, "_MEIPASS")) if getattr(sys, "frozen", False) else \
+    Path(__file__).parent
+
 images: dict[Card, Surface] = {
-    card: smoothscale_by(pygame.image.load(f"assets/cards/{card.get_filename()}"),
+    card: smoothscale_by(pygame.image.load(BASE_PATH / "assets" / "cards" / card.get_filename()),
                          CARD_SCALE_FACTOR) for card in generate_deck()
 }
 
