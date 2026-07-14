@@ -43,7 +43,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           pyinstaller \
-            --onedir \
+            --onefile \
             --name tractor-ai-macos \
             --add-data "assets:assets" \
             main.py
@@ -78,7 +78,7 @@ jobs:
       - name: Package macOS
         if: matrix.artifact == 'macos'
         run: |
-          chmod +x dist/tractor-ai-macos/tractor-ai-macos
+          chmod +x dist/tractor-ai-macos
           cd dist
           zip -r tractor-ai-macos.zip tractor-ai-macos
 
