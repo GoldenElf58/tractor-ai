@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from pygame.math import clamp
 
-from ease_function import EaseFunction
+from .ease_function import EaseFunction
 
 
 @dataclass

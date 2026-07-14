@@ -9,13 +9,14 @@ rules.
 
 ## About This Project
 
-This project is a Python implementation of the game Tractor featuring a complete playable game
-with an interactive GUI. Multi-combination throws (甩牌) are not currently supported. The long-term
-goal is to train a machine learning model to play Tractor.
+This project is a playable desktop implementation of Tractor written in Python. Prebuilt binaries
+are available for Windows, macOS, and Linux. Multi-combination throws (甩牌) are not currently
+supported. The long-term goal is to train a machine learning model to play Tractor.
 
 ## Features
 
 * Interactive GUI
+* Cross-platform builds (Windows, macOS, Linux)
 * Player hand hiding for pass-and-play
 * Core game flow (drawing, bidding, kitty, trick-taking, scoring)
 * Single, pair, tractor, and consecutive pair trick types
@@ -24,19 +25,18 @@ goal is to train a machine learning model to play Tractor.
 * Player name customization
 * Automatic pass mode (during drawing/bidding phase)
 * Game over screen
-* Cross-platform builds (Windows, macOS, Linux)
 
 ### Gameplay
 
-![Gameplay recording](gameplay-recording.gif)
+![Gameplay recording](images/gameplay-recording.gif)
 
 ### Round Summary
 
-![Round summary](round-summary.png)
+![Round summary](images/round-summary.png)
 
 ### Game Over Screen
 
-![Game over screen](game-over.png)
+![Game over screen](images/game-over.png)
 
 ## Installation
 
@@ -50,7 +50,7 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases). D
 ### macOS
 
 Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) and download
-`tractor-ai-macos.zip`. Intel Macs are currently not supported. Extract the zip file and run
+`tractor-ai-macos.zip`. **Intel Macs are currently not supported.** Extract the zip file and run
 `tractor-ai-macos`. If you get a message that says "Apple could not verify “tractor-ai-macos” is
 free of malware that may harm your Mac or compromise your privacy," click "Done". Go to System
 Settings/Privacy & Security and scroll down to the Security section. Click "Open Anyway" next to
@@ -65,9 +65,7 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) an
 ## How To Play
 
 This is currently a pass-and-play style game, so after taking a turn, you can pass the computer to
-the next player for them to take their turn. Note that after a player finishes their turn, the next
-player's hand is shown immediately. If you're playing with others, be sure to hand the computer to
-the next player before looking at the screen
+the next player for them to take their turn.
 
 ### Drawing/Bidding Phase
 
@@ -83,4 +81,4 @@ confirm.
 
 ### Trick-Taking Phase
 
-Select the card or pair of cards you want to play and press the "Play" button.
+Select the card, pair, or consecutive pair you want to play and press the "Play" button.

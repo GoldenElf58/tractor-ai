@@ -1,4 +1,4 @@
-from ease_function import EaseFunction
+from ui import EaseFunction
 
 
 def int_to_word(n: int) -> str:
