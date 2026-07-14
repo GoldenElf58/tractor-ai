@@ -43,7 +43,7 @@ jobs:
         if: matrix.os == 'macos-latest'
         run: |
           pyinstaller \
-            --onefile \
+            --onedir \
             --name tractor-ai-macos \
             --add-data "assets:assets" \
             main.py
@@ -53,7 +53,7 @@ jobs:
         if: matrix.os == 'ubuntu-latest'
         run: |
           pyinstaller \
-            --onefile \
+            --onedir \
             --name tractor-ai-linux \
             --add-data "assets:assets" \
             main.py
@@ -63,24 +63,31 @@ jobs:
         shell: cmd
         run: |
           pyinstaller ^
-            --onefile ^
-            --name tractor-ai-windows.exe ^
+            --onedir ^
+            --name tractor-ai-windows ^
             --add-data "assets;assets" ^
             main.py
 
       - name: Package Linux
         if: matrix.artifact == 'linux'
         run: |
-          chmod +x dist/tractor-ai-linux
+          chmod +x dist/tractor-ai-linux/tractor-ai-linux
           cd dist
-          zip tractor-ai-linux.zip tractor-ai-linux
+          zip -r tractor-ai-linux.zip tractor-ai-linux
 
       - name: Package macOS
         if: matrix.artifact == 'macos'
         run: |
-          chmod +x dist/tractor-ai-macos
+          chmod +x dist/tractor-ai-macos/tractor-ai-macos
           cd dist
-          zip tractor-ai-macos.zip tractor-ai-macos
+          zip -r tractor-ai-macos.zip tractor-ai-macos
+
+      - name: Package Windows
+        if: matrix.artifact == 'windows'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path dist/tractor-ai-windows `
+          -DestinationPath dist/tractor-ai-windows.zip
 
       - name: Upload Linux
         if: matrix.artifact == 'linux'
@@ -98,4 +105,4 @@ jobs:
         if: matrix.artifact == 'windows'
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/tractor-ai-windows.exe
+          files: dist/tractor-ai-windows.zip
