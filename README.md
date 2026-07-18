@@ -10,8 +10,9 @@ rules.
 ## About This Project
 
 This project is a playable desktop implementation of Tractor written in Python. Prebuilt binaries
-are available for Windows, macOS, and Linux. Multi-combination throws (甩牌) are not currently
-supported. The long-term goal is to train a machine learning model to play Tractor.
+are available for Windows, macOS, and Linux. You can jump straight to the installation instructions
+[here](#installation). Multi-combination throws (甩牌) are not currently supported. The long-term
+goal is to train a machine learning model to play Tractor.
 
 ## Features
 
