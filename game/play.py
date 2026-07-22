@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 
-from . import FaceSuit, EffectiveSuit
+from .face_suit import FaceSuit
+from .effective_suit import EffectiveSuit
 from .card import Card, TrumpInfo
 from utils import int_to_word
 

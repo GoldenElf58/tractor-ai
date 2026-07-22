@@ -1,14 +1,28 @@
+from game.bot import Bot
+from .card import Card
 from .face_suit import FaceSuit
 from .play import Play
-from .card import Card
+from .player_type import PlayerType
 
 
 class Player:
-    def __init__(self, player_id: int):
+    def __init__(self, player_id: int, player_type: PlayerType = PlayerType.HUMAN):
         self.id: int = player_id
         self.cards: list[Card] = []
         self.tricks: list[tuple[Play, ...]] = []
         self.name: str = f"Player {player_id + 1}"
+        self.type: PlayerType = player_type
+        self.bot: Bot | None = None
+
+    def set_bot(self, bot: Bot) -> None:
+        self.bot = bot
+
+    def get_bot(self) -> Bot:
+        if self.type == PlayerType.HUMAN:
+            raise ValueError("Cannot get bot for human player")
+        if self.bot is None:
+            raise RuntimeError("Bot not initialized")
+        return self.bot
 
     def remove_card(self, card: Card) -> Card:
         self.cards.remove(card)

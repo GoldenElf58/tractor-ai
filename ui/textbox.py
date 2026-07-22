@@ -26,6 +26,9 @@ class Textbox:
     def set_text(self, text: str) -> None:
         self.text = text
 
+    def set_default_text(self, default_text: str) -> None:
+        self.default_text = default_text
+
     def get_output(self):
         return self.text if len(self.text) > 0 else self.default_text
 

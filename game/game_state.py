@@ -174,7 +174,9 @@ class GameState:
 
     def move_bid(self, move: Bid) -> None:
         if self.phase != Phase.DRAWING: raise RuntimeError("Not in drawing phase")
-        if move.owner != self.active_player: raise ValueError("Not your turn")
+        if move.owner != self.active_player:
+            print(repr(move))
+            raise ValueError(f"Invalid owner. Got {move.owner} instead of {self.active_player}")
         moves: list[Bid] = self.generate_bid_moves()
         if move not in moves: raise ValueError("Invalid move")
         self.active_player = (self.active_player + 1) % self.num_players
@@ -381,7 +383,7 @@ class GameState:
             return
         self.setup_round()
 
-    def score_points(self, trick_winner: int):
+    def score_points(self, trick_winner: int = -1):
         player_a: int = (self.round_leader + 1) % 4
         player_b: int = (self.round_leader + 3) % 4
         player_c: int = (self.round_leader + 0) % 4

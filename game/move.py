@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from game.bid import Bid
-from game.card import Card
-from game.phase import Phase
-from game.play import Play
+from .bid import Bid
+from .card import Card
+from .phase import Phase
+from .play import Play
 
 
 @dataclass
