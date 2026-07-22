@@ -15,15 +15,6 @@ from utils import ease_out_cubic
 
 pygame.init()
 
-HELP_TEXT: str = ("Commands:\n"
-                  "'h' or 'help' - Views this help message.\n"
-                  "'i' or 'info' - Views the current game state.\n"
-                  "'q' or 'quit' - Quits the game.\n"
-                  "'' - Makes the first move (typing nothing).\n"
-                  "'a' or 'auto' - Toggles automatic move mode. This will "
-                  "automatically make a move for you if there is only one possible move.\n"
-                  )
-
 ANIMATION_TIME: float = 0.3
 CARD_SCALE_FACTOR: float = 0.17
 PADDING: int = 25
