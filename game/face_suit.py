@@ -10,6 +10,9 @@ class FaceSuit(Enum):
     SPADES = 4
     JOKER = 5
 
+    def __int__(self) -> int:
+        return self.value
+
     def as_effective(self) -> EffectiveSuit:
         match self:
             case FaceSuit.SPADES:

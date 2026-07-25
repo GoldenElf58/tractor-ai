@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from utils import int_to_word
+from game.game_utils import int_to_word
 from .card import Card
 
 

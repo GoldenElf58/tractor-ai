@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from .face_suit import FaceSuit
 from .effective_suit import EffectiveSuit
 from .card import Card, TrumpInfo
-from utils import int_to_word
+from game.game_utils import int_to_word
 
 
 @dataclass

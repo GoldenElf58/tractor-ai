@@ -165,6 +165,7 @@ class GameState:
             else:
                 quantity = 1
             bid_candidate: Bid = Bid(False, card, quantity, self.active_player)
+            assert bid_candidate.card is not None
             valid_bid: bool = (
                     self.higher_bid(bid_candidate) and (not leader or card == self.bid.card) and
                     (bid_candidate.card.suit != FaceSuit.JOKER or bid_candidate.quantity == 2))
@@ -185,7 +186,10 @@ class GameState:
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
             assert self.bid.card is not None if not self.bid.empty_bid else True
-            self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
+            if self.bid.card is not None:
+                self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
+            else:
+                self.trump_suit = FaceSuit.JOKER
             self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             for player in self.players:
                 player.sort_hand(self.trump_suit, self.dominant_rank)
@@ -231,7 +235,7 @@ class GameState:
         ]
         return filtered_plays
 
-    def sorted(self, cards: list[Card | Play | Bid | Move]) -> list:
+    def sorted(self, cards: list[Card] | list[Play] | list[Card | Play]) -> list:
         cards = sorted(cards, key=lambda item: card.rank if (card := get_card(
             item)) is not None and card.rank != self.dominant_rank else 15)
         cards = sorted(cards,

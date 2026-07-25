@@ -1,4 +1,8 @@
-[
-project
-]
+[project]
+name = "tractor-ai"
+version = "0.4.6"
 requires-python = ">=3.10"
+dependencies = [
+    "torch>=2.13.0",
+    "typing-extensions>=4.16.0",
+]

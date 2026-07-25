@@ -11,7 +11,7 @@ from ai import Bot1
 from game import Bot, Card, GameState, Phase, FaceSuit, Bid, Play, Move, PlayerType
 from game.game_state import generate_deck
 from ui import Animation, Button, Menu, Textbox
-from utils import ease_out_cubic
+from ui.ui_utils import ease_out_cubic
 
 pygame.init()
 

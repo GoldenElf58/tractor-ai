@@ -7,3 +7,6 @@ class EffectiveSuit(Enum):
     HEARTS = 3
     SPADES = 4
     TRUMP = 5
+
+    def __int__(self) -> int:
+        return self.value

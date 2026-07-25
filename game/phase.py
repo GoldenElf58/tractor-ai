@@ -1,12 +1,12 @@
-from enum import Enum, auto
+from enum import Enum
 
 
 class Phase(Enum):
-    DRAWING = auto()
-    BURYING = auto()
-    TRICK_TAKING = auto()
-    TRANSITION_ROUNDS = auto()
-    GAME_END = auto()
+    DRAWING = 1
+    BURYING = 2
+    TRICK_TAKING = 3
+    TRANSITION_ROUNDS = 4
+    GAME_END = 5
 
     def __str__(self) -> str:
         match self:

@@ -1,0 +1,97 @@
+Architecture Plan
+
+main inputs:
+    108 cards (108 x 10 = 1080 one-hot encoded total):
+        0 - not seen
+        1 - in hand
+        2 - in trash (if leader)
+        3 - AI played previously
+        4 - partner played previously
+        5 - oponent a played previously
+        6 - oponent b played previously
+        7 - partner played this trick
+        8 - opponent a played this trick
+        9 - opponent b played this trick
+
+    game info (43 total):
+        0 - 0-26+ - hand size (normalized)
+        1 - 0-108 - cards remaining in draw pile (normalized)
+        2-5 - one-hot - AI ID
+        6-9 - one-hot - round leader
+        10-13 - one-hot - trick leader
+        14-19 - one-hot encoding - lead suit (5 effective suits + none)
+        20 - 2-14 - dominant rank (normalized)
+        21 - 2-14 - team one level (normalized)
+        22 - 2-14 - team two level (normalized)
+        23 - 0-200+ - offense points (normalized)
+        24 - 0-200+ - defense points (normalized)
+        25-27 - one-hot encoding - game phase (drawing, burying, trick-taking)
+        28-32 - one-hot - suits partner followed off-suit in
+        33-37 - one-hot - suits opponent a followed off-suit in
+        38-42 - one-hot - suits opponent b followed off-suit in
+
+latent space: game state in --> 64 float latent space out
+
+suit decider extra input (0 total):
+    none
+
+suit decider output (6 total):
+    suit (effective) probabilities (5 effective + mix/none)
+
+filter by suits present; mix not allowed for trick leader (throws not supported)
+
+structure decider extra info (6 total):
+    one-hot encoding - suit (5 effective + mix/none)
+
+structure decider output (4 total):
+    0-1 - probability single
+    0-1 - probabiltiy (consecutive pair)
+    0-1 - probability any/mix (only applicable for following trick leader)
+    int - pair length (3 == 3 pairs / 6 cards)
+
+filter by valid structures
+
+final card decider extra info (10 total):
+    one-hot encoding - suit (5 effective + mix/none)
+    one-hot encoding - structure (single, (consecutive) pair, any)
+    int - quantity
+
+final card decider output (108 total):
+    0-1 x 108 - card play probabilities
+
+model input/output summary:
+    latent space - 1,123 in, 64 out
+    suit decider - 64 in, 6 out
+    structure decider - 70 in, 4 out
+    card decider - 74 in, 108 out
+
+handle output:
+    single:
+        highest legal card probability is played (within chosen suit)
+    pairs:
+        trick leader or following and mix not chosen:
+            highest probability legal pair (sum card probabilities) within chosen suit
+        following but mix chosen:
+            highest probability two legal cards (always the case because mix will be filtered if
+            pair must be played
+    consecutive pairs:
+        trick leader:
+            highest probability legal consecutive pair (if multiple); determined by the sum of the
+            probabilities given to all the cards in each consecutive pair
+        following:
+            consecutive pair:
+                same as trick leader
+            mixes/other:
+                first select the highest probability consecutive pair(s) within the chosen suit (or
+                 all that must be played)
+                then select the highest probability legal pairs within the chosen suit (or all that
+                 must be played)
+                then select the highest probability legal cards within the chosen suit
+
+
+Training Plan
+
+Make basic bot
+Generate 100,000 games for data
+Train model
+Once it reaches a similar win rate to basic bot, begin self-play with PPO
