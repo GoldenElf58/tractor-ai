@@ -52,7 +52,7 @@ Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases). D
 ### macOS
 
 Go to the [releases page](https://github.com/GoldenElf58/tractor-ai/releases) and download
-`tractor-ai-macos.zip`. **Only Apply Silicon (M1/M2/M3...) Macs are currently supported.** Extract
+`tractor-ai-macos.zip`. **Only Apple Silicon (M1/M2/M3...) Macs are currently supported.** Extract
 the zip file and run `tractor-ai-macos`. If you get a message that says "Apple could not verify
 “tractor-ai-macos” is free of malware that may harm your Mac or compromise your privacy," click "
 Done". Go to System Settings/Privacy & Security and scroll down to the Security section. Click "Open
