@@ -185,10 +185,10 @@ class GameState:
             self.phase = Phase.BURYING
             self.get_active_player().draw_cards(self.deck)
             self.deck.clear()
-            assert self.bid.card is not None if not self.bid.empty_bid else True
             if self.bid.card is not None:
                 self.trump_suit = FaceSuit.JOKER if self.bid.empty_bid else self.bid.card.suit
             else:
+                assert self.bid.empty_bid
                 self.trump_suit = FaceSuit.JOKER
             self.trump_info = TrumpInfo(self.trump_suit, self.dominant_rank)
             for player in self.players:
