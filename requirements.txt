@@ -1,2 +1,5 @@
+numpy
+pip
 pygame-ce
 torch
+typing-extensions

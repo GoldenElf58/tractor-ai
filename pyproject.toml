@@ -1,8 +1,11 @@
 [project]
 name = "tractor-ai"
 version = "0.4.6"
-requires-python = ">=3.10"
+requires-python = "~=3.14.0"
 dependencies = [
-    "torch>=2.13.0",
-    "typing-extensions>=4.16.0",
+    "numpy",
+    "pip",
+    "pygame-ce",
+    "torch",
+    "typing-extensions",
 ]
